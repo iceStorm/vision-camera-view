@@ -35,6 +35,7 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
+    implementation 'pub.devrel:easypermissions:3.0.0'
     implementation 'com.google.mlkit:face-detection:16.0.2'
     implementation 'com.google.android.gms:play-services-vision:20.1.2'
     implementation 'com.google.android.gms:play-services-mlkit-text-recognition:16.1.1'

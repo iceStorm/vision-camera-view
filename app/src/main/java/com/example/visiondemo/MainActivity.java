@@ -1,7 +1,9 @@
 package com.example.visiondemo;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
@@ -15,12 +17,14 @@ import androidx.core.content.PermissionChecker;
 import androidx.databinding.DataBindingUtil;
 
 import com.example.visiondemo.databinding.ActivityMainBinding;
+import com.icestorm.android.VisionCameraEventsListener;
+import com.icestorm.android.mlkit.BitmapConverter;
 
 import java.io.IOException;
 import java.util.List;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements VisionCameraEventsListener {
     private static final String TAG = "MainActivity";
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 0;
 
@@ -32,12 +36,10 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         B = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
-        B.btnSwitchCamera.setOnClickListener(v -> {
-            try {
-                B.cameraView.switchCamera();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        B.btnSwitchCamera.setOnClickListener(v -> B.cameraView.switchCamera());
+
+        B.btnTakePickture.setOnClickListener(v -> {
+            B.cameraView.captureImage();
         });
     }
 
@@ -58,4 +60,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onCameraPictureTaken(String filePath) {
+        Intent intent = new Intent(MainActivity.this, CapturedImageActivity.class);
+        intent.putExtra("bitmap", filePath);
+        startActivity(intent);
+    }
 }

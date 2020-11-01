@@ -1,6 +1,8 @@
 package com.icestorm.android;
 
 
-public interface VisionCameraEventsListener {
+import android.graphics.Bitmap;
 
+public interface VisionCameraEventsListener {
+    void onCameraPictureTaken(String filePath);
 }

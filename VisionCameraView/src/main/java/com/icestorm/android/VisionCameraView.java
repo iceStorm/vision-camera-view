@@ -2,6 +2,7 @@ package com.icestorm.android;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.TypedArray;
@@ -9,6 +10,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
@@ -16,20 +18,30 @@ import android.hardware.Camera;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.PermissionChecker;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 
 
+@SuppressWarnings("deprecation")
 public class VisionCameraView extends SurfaceView
-        implements SurfaceHolder.Callback, VisionCameraPermissionResult {
+        implements SurfaceHolder.Callback,
+            VisionCameraPermissionResult,
+            Camera.PictureCallback,
+            Camera.ShutterCallback {
+
+
     private static final String TAG = "VisionCameraView";
 
     /* CODES */
@@ -44,6 +56,7 @@ public class VisionCameraView extends SurfaceView
     private static final boolean IS_SHOW_TEXT_BORDER = true;
 
     /* properties */
+    private AlertDialog alertDialog;
     private Bitmap currentBitmapImage;
     private boolean isFrontCamera;
     private int faceColor;
@@ -101,7 +114,13 @@ public class VisionCameraView extends SurfaceView
 
         if (!isInEditMode()) {
             initCamera();
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            View layout = LayoutInflater.from(context).inflate(R.layout.saving_image_alert_layout, null);
+            builder.setView(layout);
+            alertDialog = builder.create();
         }
+
         initAttributes();
     }
 
@@ -123,9 +142,7 @@ public class VisionCameraView extends SurfaceView
 
             textPainter = new Paint();
             textPainter.setColor(this.textColor);
-            textPainter.setStrokeWidth(30f);
-            textPainter.setStyle(Paint.Style.STROKE);
-            textPainter.setTextSize(20f);
+            textPainter.setTextSize(30f);
 
             facePainter = new Paint();
             textPainter.setColor(this.faceColor);
@@ -173,36 +190,16 @@ public class VisionCameraView extends SurfaceView
 
     @Override
     protected void onDraw(Canvas canvas) {
-        canvas.drawText("Vision Camera View", 50, 50, textPainter);
         super.onDraw(canvas);
-
-        Log.i(TAG, "onDraw: ");
     }
 
 
 
     /* public utility functions */
-    public void switchCamera() throws IOException {
-        if (this.isFrontCamera) {
-            this.isFrontCamera = false;
-            camera.open(0);
-            camera.reconnect();
-        }
-        else {
-            this.isFrontCamera = true;
-            camera.open(1);
-            camera.reconnect();
-        }
-    }
-
-    public Bitmap captureImage() {
-        return currentBitmapImage;
-    }
-
-    private void openCamera() {
+    private void openCamera(int cameraId) {
         try {
             if (isCameraPermissionGranted()) {
-                camera = Camera.open(DEFAULT_CAMERA_ID);
+                camera = Camera.open(cameraId);
                 camera.setDisplayOrientation(90);
 
                 Camera.Parameters param;
@@ -214,8 +211,26 @@ public class VisionCameraView extends SurfaceView
                 camera.setPreviewDisplay(surfaceHolder);
                 camera.startPreview();
 
+
                 /* set the callback whenever content in camera is changed */
-                /*camera.setPreviewCallback(livePreviewCallback);*/
+                /*camera.setPreviewCallback(new Camera.PreviewCallback() {
+                    @Override
+                    public void onPreviewFrame(byte[] data, Camera camera) {
+                        Camera.Parameters parameters = camera.getParameters();
+                        int width = parameters.getPreviewSize().width;
+                        int height = parameters.getPreviewSize().height;
+
+                        YuvImage yuv = new YuvImage(data, parameters.getPreviewFormat(), width, height, null);
+
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        yuv.compressToJpeg(new Rect(0, 0, width, height), 90, out);
+
+                        byte[] bytes = out.toByteArray();
+                        currentBitmapImage = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+
+                        *//*drawGraphics();*//*
+                    }
+                });*/
             }
             else {
                 askCameraPermission();
@@ -227,29 +242,79 @@ public class VisionCameraView extends SurfaceView
         }
     }
 
-    private Camera.PreviewCallback livePreviewCallback = new Camera.PreviewCallback() {
-        @Override
-        public void onPreviewFrame(byte[] data, Camera camera) {
-            Camera.Parameters parameters = camera.getParameters();
-            int width = parameters.getPreviewSize().width;
-            int height = parameters.getPreviewSize().height;
-
-            YuvImage yuv = new YuvImage(data, parameters.getPreviewFormat(), width, height, null);
-
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            yuv.compressToJpeg(new Rect(0, 0, width, height), 50, out);
-
-            byte[] bytes = out.toByteArray();
-            currentBitmapImage= BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+    public void switchCamera() {
+        if (this.isFrontCamera) {
+            this.isFrontCamera = false;
+            openCamera(0);
         }
-    };
+        else {
+            this.isFrontCamera = true;
+            openCamera(1);
+        }
+    }
+
+    public void captureImage() {
+        alertDialog.show();
+        camera.takePicture(null, null, VisionCameraView.this);
+    }
+
+    @Override
+    public void onPictureTaken(byte[] data, Camera camera) {
+        Log.i(TAG, "onPictureTaken: " + data.length);
+
+
+        try {
+            String filePath = context.getFilesDir().getAbsolutePath() + "/temp.jpg";
+            File f = new File(filePath);
+            FileOutputStream outputStream = new FileOutputStream(f);
+
+            outputStream.write(getPortraitBitmap(data, camera));
+            outputStream.flush();
+            outputStream.close();
+
+
+            if (context instanceof VisionCameraEventsListener) {
+                ((VisionCameraEventsListener) context).onCameraPictureTaken(filePath);
+                alertDialog.dismiss();
+                camera.startPreview();
+            }
+        } catch (Exception e) {
+            Toast.makeText(context, "error", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "onPictureTaken: ", e);
+        }
+    }
+
+    @Override
+    public void onShutter() {
+
+    }
+
+    private byte[] getPortraitBitmap(byte[] data, Camera camera) {
+        Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length);
+        int width = bmp.getWidth();
+        int height = bmp.getHeight();
+
+
+        Matrix matrix = new Matrix();
+        matrix.postRotate(isFrontCamera? -90: 90);
+
+        Bitmap rotatedImg = Bitmap.createBitmap(bmp, 0, 0, width, height, matrix, true);
+        bmp.recycle();
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        rotatedImg.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+
+
+        rotatedImg.recycle();
+        return outputStream.toByteArray();
+    }
 
 
 
     /* SurfaceHolder Callbacks */
     @Override
     public void surfaceCreated(@NonNull SurfaceHolder holder) {
-        openCamera();
+        openCamera(isFrontCamera? 1: 0);
     }
 
     @Override
@@ -287,7 +352,7 @@ public class VisionCameraView extends SurfaceView
 
     @Override
     public void onCameraPermissionGranted() {
-        openCamera();
+        openCamera(isFrontCamera? 1: 0);
     }
 
 }

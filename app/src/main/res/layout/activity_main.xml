@@ -12,18 +12,31 @@
             android:id="@+id/cameraView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:vc_isFrontCamera="true"
+            app:vc_isFrontCamera="false"
             app:vc_textColor="@color/DEFAULT_TEXT_COLOR"
             app:vc_faceColor="@color/DEFAULT_FACE_COLOR"/>
-        <Button
-            android:id="@+id/btnSwitchCamera"
-            android:layout_width="match_parent"
+
+        <GridLayout android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
             android:layout_marginHorizontal="20dp"
-            android:layout_marginBottom="10dp"
-            android:text="Switch camera"
-            />
+            android:layout_marginBottom="10dp">
+            <Button
+                android:id="@+id/btnSwitchCamera"
+                android:layout_width="0dp"
+                android:layout_columnWeight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="15dp"
+                android:text="Switch camera"
+                />
+            <Button
+                android:id="@+id/btnTakePickture"
+                android:layout_width="0dp"
+                android:layout_columnWeight="1"
+                android:layout_height="wrap_content"
+                android:text="Take picture"
+                />
+        </GridLayout>
     </RelativeLayout>
 
 </layout>
