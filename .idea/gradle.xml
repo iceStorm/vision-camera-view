@@ -13,7 +13,6 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/VisionCameraView" />
-            <option value="$PROJECT_DIR$/VisionSurfaceView" />
             <option value="$PROJECT_DIR$/app" />
           </set>
         </option>

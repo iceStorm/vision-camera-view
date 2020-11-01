@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <resources>
-    <color name="DEFALUT_TEXT_COLOR">#F44336</color>
-    <color name="DEFALUT_FACE_COLOR">#007BFF</color>
+    <color name="DEFAULT_TEXT_COLOR">#F44336</color>
+    <color name="DEFAULT_FACE_COLOR">#007BFF</color>
 </resources>

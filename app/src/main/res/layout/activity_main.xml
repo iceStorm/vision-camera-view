@@ -5,11 +5,25 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".MainActivity">
 
-    <com.icestorm.android.VisionCameraView
-        android:id="@+id/cameraView"
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:vc_textColor="@color/DEFALUT_TEXT_COLOR"
-        app:vc_faceColor="@color/DEFALUT_FACE_COLOR"/>
+        android:layout_height="match_parent">
+        <com.icestorm.android.VisionCameraView
+            android:id="@+id/cameraView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:vc_isFrontCamera="true"
+            app:vc_textColor="@color/DEFAULT_TEXT_COLOR"
+            app:vc_faceColor="@color/DEFAULT_FACE_COLOR"/>
+        <Button
+            android:id="@+id/btnSwitchCamera"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginBottom="10dp"
+            android:text="Switch camera"
+            />
+    </RelativeLayout>
 
 </layout>

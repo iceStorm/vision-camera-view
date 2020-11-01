@@ -2,7 +2,13 @@
 
 <resources>
     <declare-styleable name="VisionCameraView">
+        <attr name="vc_isFrontCamera" format="boolean"/>
+
         <attr name="vc_textColor" format="color"/>
+        <attr name="vc_showTextBorder" format="boolean"/>
+        <attr name="vc_showText" format="boolean"/>
+
         <attr name="vc_faceColor" format="color"/>
+        <attr name="vc_showFace" format="boolean"/>
     </declare-styleable>
 </resources>

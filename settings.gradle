@@ -1,4 +1,3 @@
 include ':VisionCameraView'
-include ':VisionSurfaceView'
 include ':app'
 rootProject.name = "VisionDemo"
