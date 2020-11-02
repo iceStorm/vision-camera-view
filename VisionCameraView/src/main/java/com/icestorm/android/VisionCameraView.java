@@ -62,11 +62,8 @@ public class VisionCameraView extends RelativeLayout
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 0;
 
     /* constants */
-    private static final int DEFAULT_CAMERA_ID = 0;
     private static final int DEFAULT_TEXT_COLOR = Color.parseColor("#F44336");
     private static final int DEFAULT_FACE_COLOR = Color.parseColor("#007BFF");
-    private static final boolean IS_SHOW_FACE = true;
-    private static final boolean IS_SHOW_TEXT = true;
     private static final boolean IS_SHOW_TEXT_BORDER = true;
 
     /* properties */
@@ -75,10 +72,7 @@ public class VisionCameraView extends RelativeLayout
     private boolean isFrontCamera;
     private int faceColor;
     private int textColor;
-    private boolean showFace;
-    private boolean showText;
     private boolean showTextBorder;
-    private boolean isLightTurnedOn;
     private boolean isScanFace;
     private boolean isScanText;
     private boolean isScanQR;
@@ -158,17 +152,14 @@ public class VisionCameraView extends RelativeLayout
             TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.VisionCameraView);
 
             this.isFrontCamera = array.getBoolean(R.styleable.VisionCameraView_vc_isFrontCamera, false);
-            this.isLightTurnedOn = array.getBoolean(R.styleable.VisionCameraView_vc_isLightTurnedOn, false);
             this.isScanFace = array.getBoolean(R.styleable.VisionCameraView_vc_isScanFace, true);
             this.isScanText = array.getBoolean(R.styleable.VisionCameraView_vc_isScanText, false);
             this.isScanQR = array.getBoolean(R.styleable.VisionCameraView_vc_isScanQR, false);
 
-
             this.textColor = array.getColor(R.styleable.VisionCameraView_vc_faceColor, DEFAULT_TEXT_COLOR);
             this.faceColor = array.getColor(R.styleable.VisionCameraView_vc_faceColor, DEFAULT_FACE_COLOR);
-            this.showFace = array.getBoolean(R.styleable.VisionCameraView_vc_showFace, IS_SHOW_FACE);
-            this.showText = array.getBoolean(R.styleable.VisionCameraView_vc_showText, IS_SHOW_TEXT);
             this.showTextBorder = array.getBoolean(R.styleable.VisionCameraView_vc_showTextBorder, IS_SHOW_TEXT_BORDER);
+
 
             textPainter = new Paint();
             textPainter.setColor(this.textColor);
@@ -206,6 +197,7 @@ public class VisionCameraView extends RelativeLayout
             B.btnScanText.setEnabled(false);
             B.btnScanFace.setEnabled(false);
         }
+
     }
 
     private void assignEvents() {
@@ -215,26 +207,6 @@ public class VisionCameraView extends RelativeLayout
                 switchCamera();
             }
         });
-
-
-        /*B.btnToggleLight.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Camera.Parameters params = camera.getParameters();
-
-                if (isLightTurnedOn) {
-                    params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-                    B.btnSwitchCamera.setImageResource(R.drawable.ic_turn_off);
-                    isLightTurnedOn = false;
-                } else {
-                    params.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
-                    B.btnSwitchCamera.setImageResource(R.drawable.ic_turn_on);
-                    isLightTurnedOn = true;
-                }
-
-                camera.setParameters(params);
-            }
-        });*/
 
         B.btnScanQR.setOnClickListener(new OnClickListener() {
             @Override
@@ -339,6 +311,13 @@ public class VisionCameraView extends RelativeLayout
 
                 Camera.Parameters param;
                 param = camera.getParameters();
+
+
+                /*if (isLightTurnedOn)
+                    param.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+                else
+                    param.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);*/
+
 
                 List<Camera.Size> previewSizes = param.getSupportedPreviewSizes();
                 param.setPreviewSize(previewSizes.get(0).width, previewSizes.get(0).height);

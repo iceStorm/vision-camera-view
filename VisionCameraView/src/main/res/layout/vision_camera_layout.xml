@@ -18,15 +18,6 @@
 
 
         <com.icestorm.android.CameraImageButton
-            android:id="@+id/btnToggleLight"
-            android:src="@drawable/ic_turn_off"
-            android:background="@drawable/take_picture_background"
-            android:layout_above="@id/btnSwitchCamera"
-            android:layout_marginBottom="10dp"
-            android:layout_marginStart="15dp"
-            android:layout_width="@dimen/TakePictureButtonSize"
-            android:layout_height="@dimen/TakePictureButtonSize"/>
-        <com.icestorm.android.CameraImageButton
             android:id="@+id/btnSwitchCamera"
             android:src="@drawable/ic_toggle"
             android:background="@drawable/take_picture_background"
