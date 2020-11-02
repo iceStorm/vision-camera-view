@@ -23,9 +23,12 @@ import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.PermissionChecker;
 import androidx.databinding.DataBindingUtil;
 
+import com.google.mlkit.vision.text.Text;
 import com.icestorm.android.databinding.VisionCameraLayoutBinding;
 import com.icestorm.android.processor.MlkitProcessor;
 import com.icestorm.android.utils.CameraImageResizer;
@@ -43,13 +46,14 @@ public class VisionCameraView extends RelativeLayout
             VisionCameraPermissionResult,
             Camera.PictureCallback,
             Camera.ShutterCallback,
-            BarcodeListener {
+            BarcodeListener,
+            TextListener {
 
 
     private static final String TAG = "VisionCameraView";
 
     /* CODES */
-    private static final int CAMERA_PERMISSION_REQUEST_CODE = 0;
+    public static final int CAMERA_PERMISSION_REQUEST_CODE = 0;
 
     /* constants */
     private static final int DEFAULT_TEXT_COLOR = Color.parseColor("#F44336");
@@ -309,7 +313,7 @@ public class VisionCameraView extends RelativeLayout
                                 MlkitProcessor.processFace(resizedBitmap, B.graphicOverlay);
                             else
                                 if (isScanText)
-                                    MlkitProcessor.processText(resizedBitmap, B.graphicOverlay, isShowTextBorder, textColor, textSize);
+                                    MlkitProcessor.processText(resizedBitmap, B.graphicOverlay, isShowTextBorder, textColor, textSize, VisionCameraView.this);
                                 else
                                     if (isScanQR)
                                         MlkitProcessor.scanBarCode(resizedBitmap, VisionCameraView.this);
@@ -522,6 +526,12 @@ public class VisionCameraView extends RelativeLayout
     public void onBarcodeDetected(String value) {
         if (context instanceof VisionCameraEventsListener)
             ((VisionCameraEventsListener) context).onBarcodeDetected(value);
+    }
+
+    @Override
+    public void onTextDetected(Text textBlocks) {
+        if (context instanceof VisionCameraEventsListener)
+            ((VisionCameraEventsListener) context).onTextDetected(textBlocks);
     }
 
 }

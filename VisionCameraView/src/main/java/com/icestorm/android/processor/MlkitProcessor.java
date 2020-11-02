@@ -23,6 +23,7 @@ import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.icestorm.android.BarcodeListener;
+import com.icestorm.android.TextListener;
 import com.icestorm.android.mlkit.FaceContourGraphic;
 import com.icestorm.android.mlkit.GraphicOverlay;
 import com.icestorm.android.mlkit.TextGraphic;
@@ -33,7 +34,7 @@ public class MlkitProcessor {
     private static final String TAG = "MlkitProcessor";
 
 
-    public static void processText(Bitmap bitmap, final GraphicOverlay overlay, final boolean showTextBounder, final int textColor, final float textSize) {
+    public static void processText(Bitmap bitmap, final GraphicOverlay overlay, final boolean showTextBounder, final int textColor, final float textSize, final TextListener listener) {
         overlay.clear();
         InputImage image = InputImage.fromBitmap(bitmap, 0);
 
@@ -46,6 +47,10 @@ public class MlkitProcessor {
                         Log.i(TAG, "onSuccess: no text found");
                         return;
                     }
+
+
+                    listener.onTextDetected(text);
+
 
                     for (Text.TextBlock paragraph : text.getTextBlocks())
                         for (Text.Line line : paragraph.getLines())

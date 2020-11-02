@@ -54,7 +54,12 @@ public class MainActivity extends AppCompatActivity implements VisionCameraEvent
 
     @Override
     public void onBarcodeDetected(String value) {
+        Toast.makeText(this, value, Toast.LENGTH_SHORT).show();
+    }
 
+    @Override
+    public void onTextDetected(Text textBlocks) {
+        Log.i(TAG, "onTextDetected: " + textBlocks.getText());
     }
 
 }
