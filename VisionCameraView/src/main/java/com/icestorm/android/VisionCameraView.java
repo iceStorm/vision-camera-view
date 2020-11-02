@@ -8,18 +8,12 @@ import android.content.pm.PackageManager;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
-import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.os.Build;
-import android.renderscript.Allocation;
-import android.renderscript.Element;
-import android.renderscript.RenderScript;
-import android.renderscript.ScriptIntrinsicYuvToRGB;
-import android.renderscript.Type;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -32,20 +26,17 @@ import androidx.annotation.NonNull;
 import androidx.core.content.PermissionChecker;
 import androidx.databinding.DataBindingUtil;
 
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.mlkit.vision.common.InputImage;
-import com.google.mlkit.vision.text.Text;
-import com.google.mlkit.vision.text.TextRecognition;
-import com.google.mlkit.vision.text.TextRecognizer;
 import com.icestorm.android.databinding.VisionCameraLayoutBinding;
+import com.icestorm.android.processor.MlkitProcessor;
+import com.icestorm.android.utils.CameraImageResizer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+
+import static com.icestorm.android.processor.MlkitProcessor.ProcessingType.FACE;
+import static com.icestorm.android.processor.MlkitProcessor.ProcessingType.TEXT;
 
 
 @SuppressWarnings("deprecation")
@@ -64,14 +55,15 @@ public class VisionCameraView extends RelativeLayout
     /* constants */
     private static final int DEFAULT_TEXT_COLOR = Color.parseColor("#F44336");
     private static final int DEFAULT_FACE_COLOR = Color.parseColor("#007BFF");
+    private static final float DEFAULT_TEXT_SIZE = 30f;
     private static final boolean IS_SHOW_TEXT_BORDER = true;
 
     /* properties */
     private AlertDialog alertDialog;
-    private Bitmap currentBitmapImage;
     private boolean isFrontCamera;
     private int faceColor;
     private int textColor;
+    private float textSize;
     private boolean showTextBorder;
     private boolean isScanFace;
     private boolean isScanText;
@@ -79,10 +71,8 @@ public class VisionCameraView extends RelativeLayout
 
     /* fields */
     private VisionCameraLayoutBinding B;
-    private Set<Text.Element> words = new HashSet<>();
-    private Paint textPainter;
-    private Paint facePainter;
-    private float aspectRatio = 0f;
+    private List<Camera.Size> mSupportedPreviewSizes;
+    private Camera.Size mPreviewSize;
     private Camera camera;
     private Context context;
     private AttributeSet attrs;
@@ -129,17 +119,23 @@ public class VisionCameraView extends RelativeLayout
         this.context = context;
         this.attrs = attrs;
 
+
         if (!isInEditMode()) {
             initCamera();
             assignEvents();
-
-            AlertDialog.Builder builder = new AlertDialog.Builder(context);
-            View layout = inflater.inflate(R.layout.saving_image_alert_layout, null);
-            builder.setView(layout);
-            alertDialog = builder.create();
+            initAlertDialog(inflater);
         }
 
-        initAttributes();
+
+        initAttributes();   /* must call before all other operations */
+    }
+
+    private void initAlertDialog(LayoutInflater inflater) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        View layout = inflater.inflate(R.layout.saving_image_alert_layout, null);
+        builder.setView(layout);
+        alertDialog = builder.create();
+        alertDialog.setCancelable(false);
     }
 
     private void initCamera() {
@@ -158,18 +154,8 @@ public class VisionCameraView extends RelativeLayout
 
             this.textColor = array.getColor(R.styleable.VisionCameraView_vc_faceColor, DEFAULT_TEXT_COLOR);
             this.faceColor = array.getColor(R.styleable.VisionCameraView_vc_faceColor, DEFAULT_FACE_COLOR);
+            this.textSize = array.getDimension(R.styleable.VisionCameraView_vc_textSize, DEFAULT_TEXT_SIZE);
             this.showTextBorder = array.getBoolean(R.styleable.VisionCameraView_vc_showTextBorder, IS_SHOW_TEXT_BORDER);
-
-
-            textPainter = new Paint();
-            textPainter.setColor(this.textColor);
-            textPainter.setTextSize(30f);
-
-            facePainter = new Paint();
-            textPainter.setColor(this.faceColor);
-            textPainter.setStrokeWidth(30f);
-            textPainter.setStyle(Paint.Style.STROKE);
-            textPainter.setTextSize(20f);
 
             array.recycle();
         }
@@ -211,6 +197,7 @@ public class VisionCameraView extends RelativeLayout
         B.btnScanQR.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
+                B.graphicOverlay.clear();
                 isScanQR = !isScanQR;
                 B.btnScanQR.setEnabled(isScanQR);
 
@@ -226,6 +213,7 @@ public class VisionCameraView extends RelativeLayout
         B.btnScanFace.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
+                B.graphicOverlay.clear();
                 isScanFace = !isScanFace;
                 B.btnScanFace.setEnabled(isScanFace);
 
@@ -233,18 +221,30 @@ public class VisionCameraView extends RelativeLayout
                     isScanQR = false;
                     B.btnScanQR.setEnabled(false);
                 }
+
+                if (isScanText) {
+                    isScanText = false;
+                    B.btnScanText.setEnabled(false);
+                }
             }
         });
 
         B.btnScanText.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
+                B.graphicOverlay.clear();
                 isScanText = !isScanText;
                 B.btnScanText.setEnabled(isScanText);
 
                 if (isScanQR) {
                     isScanQR = false;
                     B.btnScanQR.setEnabled(false);
+                    B.graphicOverlay.clear();
+                }
+
+                if (isScanFace) {
+                    isScanFace = false;
+                    B.btnScanFace.setEnabled(false);
                 }
             }
         });
@@ -260,79 +260,55 @@ public class VisionCameraView extends RelativeLayout
 
 
 
-    /* Parent methods overriding */
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-
-
-        int width = MeasureSpec.getSize(widthMeasureSpec);
-        int height = MeasureSpec.getSize(heightMeasureSpec);
-
-
-        if (this.aspectRatio == 0f)
-            setMeasuredDimension(width, height);
-        else {
-            int newWidth;
-            int newHeight;
-            float actualRatio = width > height ? aspectRatio : 1f/aspectRatio;
-
-            if (width < height * actualRatio) {
-                newHeight = height;
-                newWidth = Math.round(height * actualRatio);
-            } else {
-                newHeight = height;
-                newWidth = Math.round(width / actualRatio);
-            }
-
-            Log.d(TAG, String.format("Measured dimensions set: %d x %d", newWidth, newHeight));
-            setMeasuredDimension(newWidth, newHeight);
-        }
-    }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-
-        /*for (Text.Element word: words) {
-            RectF rect = new RectF(word.getBoundingBox());
-            canvas.drawText(word.getText(), rect.left, rect.bottom, textPainter);
-        }*/
-    }
-
-
-
     /* public utility functions */
     private void openCamera(int cameraId) {
         try {
             if (isCameraPermissionGranted()) {
+                B.graphicOverlay.clear();
                 camera = Camera.open(cameraId);
                 camera.setDisplayOrientation(90);
 
-                Camera.Parameters param;
+                final Camera.Parameters param;
                 param = camera.getParameters();
 
+                mSupportedPreviewSizes = param.getSupportedPreviewSizes();
+                for(Camera.Size str: mSupportedPreviewSizes)
+                    Log.e(TAG, str.width + "/" + str.height);
 
-                /*if (isLightTurnedOn)
-                    param.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
-                else
-                    param.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);*/
-
-
-                List<Camera.Size> previewSizes = param.getSupportedPreviewSizes();
-                param.setPreviewSize(previewSizes.get(0).width, previewSizes.get(0).height);
+                mPreviewSize = mSupportedPreviewSizes.get(0);
+                param.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
                 camera.setParameters(param);
                 camera.setPreviewDisplay(surfaceHolder);
                 camera.startPreview();
 
 
                 /* set the callback whenever content in camera is changed */
-                /*camera.setPreviewCallback(new Camera.PreviewCallback() {
+                camera.setPreviewCallback(new Camera.PreviewCallback() {
                     @Override
                     public void onPreviewFrame(byte[] data, Camera camera) {
-                        saveToImage(data);
+                        try {
+                            byte[] yuvBytes = getYuvBytesArray(data, camera);
+                            byte[] portraitBytes = getPortraitBytesArray(yuvBytes);
+                            //  saveToImage(portraitBytes);
+
+                            Camera.Parameters params = camera.getParameters();
+                            Camera.Size size = params.getPreviewSize();
+
+                            Bitmap actualBitmap = BitmapFactory.decodeByteArray(portraitBytes, 0, portraitBytes.length);
+                            Bitmap resizedBitmap = new CameraImageResizer(actualBitmap, B.getRoot()).getResizedImage();
+
+                            if (isScanFace)
+                                MlkitProcessor.process(FACE, resizedBitmap, B.graphicOverlay);
+                            else
+                                if (isScanText)
+                                    MlkitProcessor.process(TEXT, resizedBitmap, B.graphicOverlay);
+                        }
+                        catch (Exception e) {
+                            Toast toast = Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT);
+                            toast.show();
+                        }
                     }
-                });*/
+                });
             }
             else {
                 askCameraPermission();
@@ -370,7 +346,7 @@ public class VisionCameraView extends RelativeLayout
             File f = new File(filePath);
             FileOutputStream outputStream = new FileOutputStream(f);
 
-            outputStream.write(getPortraitByteArray(data));
+            outputStream.write(getPortraitBytesArray(data));
             outputStream.flush();
             outputStream.close();
 
@@ -394,7 +370,7 @@ public class VisionCameraView extends RelativeLayout
 
 
     /* image data processing */
-    private byte[] getPortraitByteArray(byte[] data) {
+    private byte[] getPortraitBytesArray(byte[] data) {
         Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length);
         if (bmp == null) return null;
 
@@ -417,65 +393,14 @@ public class VisionCameraView extends RelativeLayout
         return outputStream.toByteArray();
     }
 
-    private Bitmap getPortraitBitmap(byte[] data, Camera camera) {
-        Camera.Parameters params = camera.getParameters();
-        int w = params.getPreviewSize().width;
-        int h = params.getPreviewSize().height;
-        Rect r = new Rect(0, 0, w, h);
+    private byte[] getYuvBytesArray(byte[] data, Camera camera) {
+        Camera.Parameters parameters = camera.getParameters();
+        Camera.Size size = parameters.getPreviewSize();
+        YuvImage image = new YuvImage(data, parameters.getPreviewFormat(), size.width, size.height, null);
 
-        Bitmap bitmap = Bitmap.createBitmap(r.width(), r.height(), Bitmap.Config.ARGB_8888);
-        Allocation bmData = renderScriptNV21ToRGBA888(
-                context,
-                r.width(),
-                r.height(),
-                data);
-
-        bmData.copyTo(bitmap);
-        return bitmap;
-    }
-
-    public Allocation renderScriptNV21ToRGBA888(Context context, int width, int height, byte[] nv21) {
-        RenderScript rs = RenderScript.create(context);
-        ScriptIntrinsicYuvToRGB yuvToRgbIntrinsic = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs));
-
-        Type.Builder yuvType = new Type.Builder(rs, Element.U8(rs)).setX(nv21.length);
-        Allocation in = Allocation.createTyped(rs, yuvType.create(), Allocation.USAGE_SCRIPT);
-
-        Type.Builder rgbaType = new Type.Builder(rs, Element.RGBA_8888(rs)).setX(width).setY(height);
-        Allocation out = Allocation.createTyped(rs, rgbaType.create(), Allocation.USAGE_SCRIPT);
-
-        in.copyFrom(nv21);
-
-        yuvToRgbIntrinsic.setInput(in);
-        yuvToRgbIntrinsic.forEach(out);
-        return out;
-    }
-
-    private void drawTextGraphics() {
-        InputImage inputImage = InputImage.fromBitmap(currentBitmapImage, 0);
-        if (inputImage == null) return;
-
-        TextRecognizer recognizer = TextRecognition.getClient();
-        recognizer.process(inputImage)
-            .addOnSuccessListener(new OnSuccessListener<Text>() {
-                @Override
-                public void onSuccess(Text text) {
-                    if (text.getTextBlocks().size() == 0) {
-                        Log.i(TAG, "onSuccess: no text found");
-                        return;
-                    }
-
-                    if (context instanceof VisionCameraEventsListener) {
-                        ((VisionCameraEventsListener) context).onTextDetected(text);
-                    }
-                }
-            })
-            .addOnFailureListener(new OnFailureListener() {
-                @Override
-                public void onFailure(@NonNull Exception e) {
-
-                }
-            });
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        image.compressToJpeg(new Rect(0, 0, image.getWidth(), image.getHeight()), 90, bos);
+        return bos.toByteArray();
     }
 
     private void saveToImage(byte[] data) {
@@ -489,13 +414,7 @@ public class VisionCameraView extends RelativeLayout
             File f = new File(filePath);
             FileOutputStream outputStream = new FileOutputStream(f);
 
-            byte[] portraitArray = getPortraitByteArray(data);
-            if (portraitArray == null || portraitArray.length == 0) {
-                outputStream.close();
-                return;
-            }
-
-            outputStream.write(portraitArray);
+            outputStream.write(data);
             outputStream.flush();
             outputStream.close();
 
@@ -504,6 +423,42 @@ public class VisionCameraView extends RelativeLayout
             Toast.makeText(context, "error", Toast.LENGTH_SHORT).show();
             Log.e(TAG, "onPictureTaken: ", e);
         }
+    }
+
+    private Camera.Size getOptimalPreviewSize(List<Camera.Size> sizes, int w, int h) {
+        final double ASPECT_TOLERANCE = 0.1;
+        double targetRatio = (double) h / w;
+
+        if (sizes == null)
+            return null;
+
+        Camera.Size optimalSize = null;
+        double minDiff = Double.MAX_VALUE;
+
+        int targetHeight = h;
+
+        for (Camera.Size size : sizes) {
+            double ratio = (double) size.height / size.width;
+            if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE)
+                continue;
+
+            if (Math.abs(size.height - targetHeight) < minDiff) {
+                optimalSize = size;
+                minDiff = Math.abs(size.height - targetHeight);
+            }
+        }
+
+        if (optimalSize == null) {
+            minDiff = Double.MAX_VALUE;
+            for (Camera.Size size : sizes) {
+                if (Math.abs(size.height - targetHeight) < minDiff) {
+                    optimalSize = size;
+                    minDiff = Math.abs(size.height - targetHeight);
+                }
+            }
+        }
+
+        return optimalSize;
     }
 
 

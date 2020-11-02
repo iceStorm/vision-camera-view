@@ -9,6 +9,8 @@
 
         <attr name="vc_faceColor" format="color"/>
         <attr name="vc_textColor" format="color"/>
+
+        <attr name="vc_textSize" format="dimension"/>
         <attr name="vc_showTextBorder" format="boolean"/>
     </declare-styleable>
 </resources>

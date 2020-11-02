@@ -53,10 +53,6 @@ public class MainActivity extends AppCompatActivity implements VisionCameraEvent
 
     @Override
     public void onTextDetected(Text text) {
-        for (Text.TextBlock paragraph : text.getTextBlocks())
-            for (Text.Line line : paragraph.getLines())
-                for (Text.Element word : line.getElements()) {
-                    B.txtContent.setText(B.txtContent.getText() + word.getText());
-                }
     }
+
 }

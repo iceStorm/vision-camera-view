@@ -9,6 +9,9 @@ import android.graphics.BitmapFactory;
 import android.os.Bundle;
 
 import com.example.visiondemo.databinding.ActivityCaturedImageBinding;
+import com.icestorm.android.processor.MlkitProcessor;
+import com.icestorm.android.utils.ImageResizer;
+
 
 public class CapturedImageActivity extends AppCompatActivity {
     private static final String TAG = "CapturedImageActivity";
@@ -25,5 +28,8 @@ public class CapturedImageActivity extends AppCompatActivity {
 
         Bitmap bmp = BitmapFactory.decodeFile(filePath);
         B.imv.setImageBitmap(bmp);
+
+
+        /*MlkitProcessor.processFace(new ImageResizer(bmp, B.imv).getResizedImage(), B.graphicOverlay);*/
     }
 }
