@@ -44,6 +44,7 @@ public class MainActivity extends AppCompatActivity implements VisionCameraEvent
         }
     }
 
+
     @Override
     public void onCameraPictureTaken(String filePath) {
         Intent intent = new Intent(MainActivity.this, CapturedImageActivity.class);
@@ -52,7 +53,8 @@ public class MainActivity extends AppCompatActivity implements VisionCameraEvent
     }
 
     @Override
-    public void onTextDetected(Text text) {
+    public void onBarcodeDetected(String value) {
+
     }
 
 }

@@ -29,7 +29,6 @@ import com.google.mlkit.vision.text.Text;
 public class TextGraphic extends GraphicOverlay.Graphic {
 
     private static final String TAG = "TextGraphic";
-    private static final float TEXT_SIZE = 30.0f;
     private static final float STROKE_WIDTH = 4.0f;
 
     private final Paint rectPaint;
@@ -38,7 +37,7 @@ public class TextGraphic extends GraphicOverlay.Graphic {
     private final boolean drawTextBounding;
 
 
-    public TextGraphic(GraphicOverlay overlay, Text.Element element, int textColor, boolean drawTextBounding) {
+    public TextGraphic(GraphicOverlay overlay, Text.Element element, int textColor, float textSize, boolean drawTextBounding) {
         super(overlay);
         this.element = element;
         this.drawTextBounding = drawTextBounding;
@@ -50,7 +49,7 @@ public class TextGraphic extends GraphicOverlay.Graphic {
 
         textPaint = new Paint();
         textPaint.setColor(textColor);
-        textPaint.setTextSize(TEXT_SIZE);
+        textPaint.setTextSize(textSize);
 
         // Redraw the overlay, as this graphic has been added.
         postInvalidate();

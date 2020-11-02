@@ -35,8 +35,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.util.List;
 
-import static com.icestorm.android.processor.MlkitProcessor.ProcessingType.FACE;
-import static com.icestorm.android.processor.MlkitProcessor.ProcessingType.TEXT;
 
 
 @SuppressWarnings("deprecation")
@@ -44,7 +42,8 @@ public class VisionCameraView extends RelativeLayout
         implements SurfaceHolder.Callback,
             VisionCameraPermissionResult,
             Camera.PictureCallback,
-            Camera.ShutterCallback {
+            Camera.ShutterCallback,
+            BarcodeListener {
 
 
     private static final String TAG = "VisionCameraView";
@@ -56,7 +55,7 @@ public class VisionCameraView extends RelativeLayout
     private static final int DEFAULT_TEXT_COLOR = Color.parseColor("#F44336");
     private static final int DEFAULT_FACE_COLOR = Color.parseColor("#007BFF");
     private static final float DEFAULT_TEXT_SIZE = 30f;
-    private static final boolean IS_SHOW_TEXT_BORDER = true;
+    private static final boolean IS_SHOW_TEXT_BORDER = false;
 
     /* properties */
     private AlertDialog alertDialog;
@@ -64,7 +63,7 @@ public class VisionCameraView extends RelativeLayout
     private int faceColor;
     private int textColor;
     private float textSize;
-    private boolean showTextBorder;
+    private boolean isShowTextBorder;
     private boolean isScanFace;
     private boolean isScanText;
     private boolean isScanQR;
@@ -148,14 +147,14 @@ public class VisionCameraView extends RelativeLayout
             TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.VisionCameraView);
 
             this.isFrontCamera = array.getBoolean(R.styleable.VisionCameraView_vc_isFrontCamera, false);
-            this.isScanFace = array.getBoolean(R.styleable.VisionCameraView_vc_isScanFace, true);
-            this.isScanText = array.getBoolean(R.styleable.VisionCameraView_vc_isScanText, false);
+            this.isScanFace = array.getBoolean(R.styleable.VisionCameraView_vc_isScanFace, false);
+            this.isScanText = array.getBoolean(R.styleable.VisionCameraView_vc_isScanText, true);
             this.isScanQR = array.getBoolean(R.styleable.VisionCameraView_vc_isScanQR, false);
 
-            this.textColor = array.getColor(R.styleable.VisionCameraView_vc_faceColor, DEFAULT_TEXT_COLOR);
+            this.textColor = array.getColor(R.styleable.VisionCameraView_vc_textColor, DEFAULT_TEXT_COLOR);
             this.faceColor = array.getColor(R.styleable.VisionCameraView_vc_faceColor, DEFAULT_FACE_COLOR);
             this.textSize = array.getDimension(R.styleable.VisionCameraView_vc_textSize, DEFAULT_TEXT_SIZE);
-            this.showTextBorder = array.getBoolean(R.styleable.VisionCameraView_vc_showTextBorder, IS_SHOW_TEXT_BORDER);
+            this.isShowTextBorder = array.getBoolean(R.styleable.VisionCameraView_vc_showTextBorder, IS_SHOW_TEXT_BORDER);
 
             array.recycle();
         }
@@ -182,11 +181,14 @@ public class VisionCameraView extends RelativeLayout
             isScanText = false;
             B.btnScanText.setEnabled(false);
             B.btnScanFace.setEnabled(false);
+
+            B.scannerOverlay.setVisibility(VISIBLE);
         }
 
     }
 
     private void assignEvents() {
+
         B.btnSwitchCamera.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -207,6 +209,9 @@ public class VisionCameraView extends RelativeLayout
                     B.btnScanFace.setEnabled(false);
                     B.btnScanText.setEnabled(false);
                 }
+
+
+                B.scannerOverlay.setVisibility(isScanQR ? VISIBLE: GONE);
             }
         });
 
@@ -226,6 +231,9 @@ public class VisionCameraView extends RelativeLayout
                     isScanText = false;
                     B.btnScanText.setEnabled(false);
                 }
+
+
+                B.scannerOverlay.setVisibility(isScanQR ? VISIBLE: GONE);
             }
         });
 
@@ -246,6 +254,8 @@ public class VisionCameraView extends RelativeLayout
                     isScanFace = false;
                     B.btnScanFace.setEnabled(false);
                 }
+
+                B.scannerOverlay.setVisibility(isScanQR ? VISIBLE: GONE);
             }
         });
 
@@ -275,7 +285,7 @@ public class VisionCameraView extends RelativeLayout
                 for(Camera.Size str: mSupportedPreviewSizes)
                     Log.e(TAG, str.width + "/" + str.height);
 
-                mPreviewSize = mSupportedPreviewSizes.get(0);
+                mPreviewSize = getOptimalPreviewSize(mSupportedPreviewSizes, getWidth(), getHeight());
                 param.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
                 camera.setParameters(param);
                 camera.setPreviewDisplay(surfaceHolder);
@@ -289,19 +299,20 @@ public class VisionCameraView extends RelativeLayout
                         try {
                             byte[] yuvBytes = getYuvBytesArray(data, camera);
                             byte[] portraitBytes = getPortraitBytesArray(yuvBytes);
-                            //  saveToImage(portraitBytes);
 
-                            Camera.Parameters params = camera.getParameters();
-                            Camera.Size size = params.getPreviewSize();
 
                             Bitmap actualBitmap = BitmapFactory.decodeByteArray(portraitBytes, 0, portraitBytes.length);
                             Bitmap resizedBitmap = new CameraImageResizer(actualBitmap, B.getRoot()).getResizedImage();
 
+
                             if (isScanFace)
-                                MlkitProcessor.process(FACE, resizedBitmap, B.graphicOverlay);
+                                MlkitProcessor.processFace(resizedBitmap, B.graphicOverlay);
                             else
                                 if (isScanText)
-                                    MlkitProcessor.process(TEXT, resizedBitmap, B.graphicOverlay);
+                                    MlkitProcessor.processText(resizedBitmap, B.graphicOverlay, isShowTextBorder, textColor, textSize);
+                                else
+                                    if (isScanQR)
+                                        MlkitProcessor.scanBarCode(resizedBitmap, VisionCameraView.this);
                         }
                         catch (Exception e) {
                             Toast toast = Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT);
@@ -505,6 +516,12 @@ public class VisionCameraView extends RelativeLayout
     @Override
     public void onCameraPermissionGranted() {
         openCamera(isFrontCamera? 1: 0);
+    }
+
+    @Override
+    public void onBarcodeDetected(String value) {
+        if (context instanceof VisionCameraEventsListener)
+            ((VisionCameraEventsListener) context).onBarcodeDetected(value);
     }
 
 }

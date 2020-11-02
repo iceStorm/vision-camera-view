@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<layout xmlns:android="http://schemas.android.com/apk/res/android">
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <RelativeLayout
         android:id="@+id/rootView"
@@ -15,6 +16,15 @@
             android:id="@+id/graphicOverlay"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
+        <info.androidhive.barcode.ScannerOverlay
+            android:id="@+id/scannerOverlay"
+            android:visibility="gone"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#45000000"
+            app:line_width="5"
+            app:line_speed="50"
+            />
 
 
         <com.icestorm.android.CameraImageButton
