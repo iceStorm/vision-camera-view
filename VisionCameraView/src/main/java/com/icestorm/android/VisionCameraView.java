@@ -13,29 +13,46 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.os.Build;
+import android.renderscript.Allocation;
+import android.renderscript.Element;
+import android.renderscript.RenderScript;
+import android.renderscript.ScriptIntrinsicYuvToRGB;
+import android.renderscript.Type;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.PermissionChecker;
+import androidx.databinding.DataBindingUtil;
+
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.icestorm.android.databinding.VisionCameraLayoutBinding;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 
 @SuppressWarnings("deprecation")
-public class VisionCameraView extends SurfaceView
+public class VisionCameraView extends RelativeLayout
         implements SurfaceHolder.Callback,
             VisionCameraPermissionResult,
             Camera.PictureCallback,
@@ -66,6 +83,8 @@ public class VisionCameraView extends SurfaceView
     private boolean showTextBorder;
 
     /* fields */
+    private VisionCameraLayoutBinding B;
+    private Set<Text.Element> words = new HashSet<>();
     private Paint textPainter;
     private Paint facePainter;
     private float aspectRatio = 0f;
@@ -109,14 +128,18 @@ public class VisionCameraView extends SurfaceView
 
     /* initializing */
     private void init(Context context, AttributeSet attrs) {
+        LayoutInflater inflater = LayoutInflater.from(context);
+        B = DataBindingUtil.inflate(inflater, R.layout.vision_camera_layout, this, true);
+
         this.context = context;
         this.attrs = attrs;
 
         if (!isInEditMode()) {
             initCamera();
+            assignEvents();
 
             AlertDialog.Builder builder = new AlertDialog.Builder(context);
-            View layout = LayoutInflater.from(context).inflate(R.layout.saving_image_alert_layout, null);
+            View layout = inflater.inflate(R.layout.saving_image_alert_layout, null);
             builder.setView(layout);
             alertDialog = builder.create();
         }
@@ -125,7 +148,7 @@ public class VisionCameraView extends SurfaceView
     }
 
     private void initCamera() {
-        this.surfaceHolder = getHolder();
+        this.surfaceHolder = B.surfaceView.getHolder();
         this.surfaceHolder.addCallback(this);
     }
 
@@ -154,6 +177,22 @@ public class VisionCameraView extends SurfaceView
         }
 
         Log.i(TAG, "initAttributes: ");
+    }
+
+    private void assignEvents() {
+        B.btnSwitchCamera.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                switchCamera();
+            }
+        });
+
+        B.btnTakePickture.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                beginCaptureImage();
+            }
+        });
     }
 
 
@@ -191,6 +230,11 @@ public class VisionCameraView extends SurfaceView
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
+        /*for (Text.Element word: words) {
+            RectF rect = new RectF(word.getBoundingBox());
+            canvas.drawText(word.getText(), rect.left, rect.bottom, textPainter);
+        }*/
     }
 
 
@@ -216,19 +260,7 @@ public class VisionCameraView extends SurfaceView
                 /*camera.setPreviewCallback(new Camera.PreviewCallback() {
                     @Override
                     public void onPreviewFrame(byte[] data, Camera camera) {
-                        Camera.Parameters parameters = camera.getParameters();
-                        int width = parameters.getPreviewSize().width;
-                        int height = parameters.getPreviewSize().height;
-
-                        YuvImage yuv = new YuvImage(data, parameters.getPreviewFormat(), width, height, null);
-
-                        ByteArrayOutputStream out = new ByteArrayOutputStream();
-                        yuv.compressToJpeg(new Rect(0, 0, width, height), 90, out);
-
-                        byte[] bytes = out.toByteArray();
-                        currentBitmapImage = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-
-                        *//*drawGraphics();*//*
+                        saveToImage(data);
                     }
                 });*/
             }
@@ -253,7 +285,7 @@ public class VisionCameraView extends SurfaceView
         }
     }
 
-    public void captureImage() {
+    public void beginCaptureImage() {
         alertDialog.show();
         camera.takePicture(null, null, VisionCameraView.this);
     }
@@ -268,7 +300,7 @@ public class VisionCameraView extends SurfaceView
             File f = new File(filePath);
             FileOutputStream outputStream = new FileOutputStream(f);
 
-            outputStream.write(getPortraitBitmap(data, camera));
+            outputStream.write(getPortraitByteArray(data));
             outputStream.flush();
             outputStream.close();
 
@@ -289,8 +321,11 @@ public class VisionCameraView extends SurfaceView
 
     }
 
-    private byte[] getPortraitBitmap(byte[] data, Camera camera) {
+    private byte[] getPortraitByteArray(byte[] data) {
         Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length);
+        if (bmp == null) return null;
+
+
         int width = bmp.getWidth();
         int height = bmp.getHeight();
 
@@ -307,6 +342,95 @@ public class VisionCameraView extends SurfaceView
 
         rotatedImg.recycle();
         return outputStream.toByteArray();
+    }
+
+    private Bitmap getPortraitBitmap(byte[] data, Camera camera) {
+        Camera.Parameters params = camera.getParameters();
+        int w = params.getPreviewSize().width;
+        int h = params.getPreviewSize().height;
+        Rect r = new Rect(0, 0, w, h);
+
+        Bitmap bitmap = Bitmap.createBitmap(r.width(), r.height(), Bitmap.Config.ARGB_8888);
+        Allocation bmData = renderScriptNV21ToRGBA888(
+                context,
+                r.width(),
+                r.height(),
+                data);
+
+        bmData.copyTo(bitmap);
+        return bitmap;
+    }
+
+    public Allocation renderScriptNV21ToRGBA888(Context context, int width, int height, byte[] nv21) {
+        RenderScript rs = RenderScript.create(context);
+        ScriptIntrinsicYuvToRGB yuvToRgbIntrinsic = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs));
+
+        Type.Builder yuvType = new Type.Builder(rs, Element.U8(rs)).setX(nv21.length);
+        Allocation in = Allocation.createTyped(rs, yuvType.create(), Allocation.USAGE_SCRIPT);
+
+        Type.Builder rgbaType = new Type.Builder(rs, Element.RGBA_8888(rs)).setX(width).setY(height);
+        Allocation out = Allocation.createTyped(rs, rgbaType.create(), Allocation.USAGE_SCRIPT);
+
+        in.copyFrom(nv21);
+
+        yuvToRgbIntrinsic.setInput(in);
+        yuvToRgbIntrinsic.forEach(out);
+        return out;
+    }
+
+    private void drawTextGraphics() {
+        InputImage inputImage = InputImage.fromBitmap(currentBitmapImage, 0);
+        if (inputImage == null) return;
+
+        TextRecognizer recognizer = TextRecognition.getClient();
+        recognizer.process(inputImage)
+            .addOnSuccessListener(new OnSuccessListener<Text>() {
+                @Override
+                public void onSuccess(Text text) {
+                    if (text.getTextBlocks().size() == 0) {
+                        Log.i(TAG, "onSuccess: no text found");
+                        return;
+                    }
+
+                    if (context instanceof VisionCameraEventsListener) {
+                        ((VisionCameraEventsListener) context).onTextDetected(text);
+                    }
+                }
+            })
+            .addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception e) {
+
+                }
+            });
+    }
+
+    private void saveToImage(byte[] data) {
+        if (data == null || data.length == 0) {
+            Log.i(TAG, "saveToImage: byte[] is empty");
+            return;
+        }
+
+        try {
+            String filePath = context.getFilesDir().getAbsolutePath() + "/stream.jpg";
+            File f = new File(filePath);
+            FileOutputStream outputStream = new FileOutputStream(f);
+
+            byte[] portraitArray = getPortraitByteArray(data);
+            if (portraitArray == null || portraitArray.length == 0) {
+                outputStream.close();
+                return;
+            }
+
+            outputStream.write(portraitArray);
+            outputStream.flush();
+            outputStream.close();
+
+            Toast.makeText(context, "New image saved", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(context, "error", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "onPictureTaken: ", e);
+        }
     }
 
 

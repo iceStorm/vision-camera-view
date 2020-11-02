@@ -1,4 +1,4 @@
-package com.icestorm.android.mlkit;
+package com.icestorm.android.utils;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
