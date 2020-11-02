@@ -81,6 +81,7 @@ public class VisionCameraView extends RelativeLayout
     private boolean showFace;
     private boolean showText;
     private boolean showTextBorder;
+    private boolean isLightTurnedOn;
 
     /* fields */
     private VisionCameraLayoutBinding B;
@@ -157,6 +158,8 @@ public class VisionCameraView extends RelativeLayout
             TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.VisionCameraView);
 
             this.isFrontCamera = array.getBoolean(R.styleable.VisionCameraView_vc_isFrontCamera, false);
+            this.isLightTurnedOn = array.getBoolean(R.styleable.VisionCameraView_vc_isLightTurnedOn, false);
+
             this.textColor = array.getColor(R.styleable.VisionCameraView_vc_faceColor, DEFAULT_TEXT_COLOR);
             this.faceColor = array.getColor(R.styleable.VisionCameraView_vc_faceColor, DEFAULT_FACE_COLOR);
             this.showFace = array.getBoolean(R.styleable.VisionCameraView_vc_showFace, IS_SHOW_FACE);
@@ -187,7 +190,28 @@ public class VisionCameraView extends RelativeLayout
             }
         });
 
-        B.btnTakePickture.setOnClickListener(new OnClickListener() {
+
+        /*B.btnToggleLight.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Camera.Parameters params = camera.getParameters();
+
+                if (isLightTurnedOn) {
+                    params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+                    B.btnSwitchCamera.setImageResource(R.drawable.ic_turn_off);
+                    isLightTurnedOn = false;
+                } else {
+                    params.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+                    B.btnSwitchCamera.setImageResource(R.drawable.ic_turn_on);
+                    isLightTurnedOn = true;
+                }
+
+                camera.setParameters(params);
+            }
+        });*/
+
+
+        B.btnTakePicture.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 beginCaptureImage();
@@ -248,8 +272,10 @@ public class VisionCameraView extends RelativeLayout
 
                 Camera.Parameters param;
                 param = camera.getParameters();
-                List<Camera.Size> previewSizes = param.getSupportedPreviewSizes();
+                if (isLightTurnedOn)
+                    param.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
 
+                List<Camera.Size> previewSizes = param.getSupportedPreviewSizes();
                 param.setPreviewSize(previewSizes.get(0).width, previewSizes.get(0).height);
                 camera.setParameters(param);
                 camera.setPreviewDisplay(surfaceHolder);

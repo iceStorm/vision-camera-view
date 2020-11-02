@@ -13,7 +13,7 @@
             android:id="@+id/cameraView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:vc_isFrontCamera="false"
+            app:vc_isFrontCamera="true"
             app:vc_textColor="@color/DEFAULT_TEXT_COLOR"
             app:vc_faceColor="@color/DEFAULT_FACE_COLOR"/>
 

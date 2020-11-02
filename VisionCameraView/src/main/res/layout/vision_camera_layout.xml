@@ -17,26 +17,65 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
 
-
-        <GridLayout android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+        <ImageButton
+            android:id="@+id/btnToggleLight"
+            android:src="@drawable/ic_turn_off"
+            android:background="@drawable/take_picture_background"
+            android:layout_above="@id/btnSwitchCamera"
+            android:layout_marginBottom="10dp"
+            android:layout_marginStart="15dp"
+            android:layout_width="@dimen/TakePictureButtonSize"
+            android:layout_height="@dimen/TakePictureButtonSize"/>
+        <ImageButton
+            android:id="@+id/btnSwitchCamera"
+            android:src="@drawable/ic_toggle"
+            android:background="@drawable/take_picture_background"
             android:layout_alignParentBottom="true"
-            android:layout_marginHorizontal="20dp"
-            android:layout_marginBottom="10dp">
-            <Button
-                android:id="@+id/btnSwitchCamera"
-                android:layout_width="0dp"
-                android:layout_columnWeight="1"
-                android:layout_height="wrap_content"
-                android:layout_marginRight="15dp"
-                android:text="Switch camera"/>
-            <Button
-                android:id="@+id/btnTakePickture"
-                android:layout_width="0dp"
-                android:layout_columnWeight="1"
-                android:layout_height="wrap_content"
-                android:text="Take picture"/>
-        </GridLayout>
+            android:layout_marginBottom="10dp"
+            android:layout_marginStart="15dp"
+            android:layout_width="@dimen/TakePictureButtonSize"
+            android:layout_height="@dimen/TakePictureButtonSize"/>
+
+        <ImageButton
+            android:id="@+id/btnTakePicture"
+            android:src="@drawable/ic_camera_lens"
+            android:background="@drawable/take_picture_background"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="15dp"
+            android:layout_width="@dimen/TakePictureButtonSize"
+            android:layout_height="@dimen/TakePictureButtonSize"/>
+
+        <ImageButton
+            android:id="@+id/btnScanFace"
+            android:src="@drawable/ic_face_recognition"
+            android:background="@drawable/take_picture_background"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentEnd="true"
+            android:layout_marginBottom="10dp"
+            android:layout_marginEnd="15dp"
+            android:layout_width="@dimen/TakePictureButtonSize"
+            android:layout_height="@dimen/TakePictureButtonSize"/>
+        <ImageButton
+            android:id="@+id/btnScanText"
+            android:src="@drawable/ic_find_text"
+            android:background="@drawable/take_picture_background"
+            android:layout_above="@id/btnScanFace"
+            android:layout_alignParentEnd="true"
+            android:layout_marginBottom="10dp"
+            android:layout_marginEnd="15dp"
+            android:layout_width="@dimen/TakePictureButtonSize"
+            android:layout_height="@dimen/TakePictureButtonSize"/>
+        <ImageButton
+            android:id="@+id/btnScanQR"
+            android:src="@drawable/ic_qr_code"
+            android:background="@drawable/take_picture_background"
+            android:layout_above="@id/btnScanText"
+            android:layout_alignParentEnd="true"
+            android:layout_marginBottom="10dp"
+            android:layout_marginEnd="15dp"
+            android:layout_width="@dimen/TakePictureButtonSize"
+            android:layout_height="@dimen/TakePictureButtonSize"/>
 
     </RelativeLayout>
 
