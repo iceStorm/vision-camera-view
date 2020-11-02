@@ -13,8 +13,6 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import android.graphics.RectF;
-import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.os.Build;
 import android.renderscript.Allocation;
@@ -26,7 +24,6 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
@@ -82,6 +79,9 @@ public class VisionCameraView extends RelativeLayout
     private boolean showText;
     private boolean showTextBorder;
     private boolean isLightTurnedOn;
+    private boolean isScanFace;
+    private boolean isScanText;
+    private boolean isScanQR;
 
     /* fields */
     private VisionCameraLayoutBinding B;
@@ -159,6 +159,10 @@ public class VisionCameraView extends RelativeLayout
 
             this.isFrontCamera = array.getBoolean(R.styleable.VisionCameraView_vc_isFrontCamera, false);
             this.isLightTurnedOn = array.getBoolean(R.styleable.VisionCameraView_vc_isLightTurnedOn, false);
+            this.isScanFace = array.getBoolean(R.styleable.VisionCameraView_vc_isScanFace, true);
+            this.isScanText = array.getBoolean(R.styleable.VisionCameraView_vc_isScanText, false);
+            this.isScanQR = array.getBoolean(R.styleable.VisionCameraView_vc_isScanQR, false);
+
 
             this.textColor = array.getColor(R.styleable.VisionCameraView_vc_faceColor, DEFAULT_TEXT_COLOR);
             this.faceColor = array.getColor(R.styleable.VisionCameraView_vc_faceColor, DEFAULT_FACE_COLOR);
@@ -179,7 +183,29 @@ public class VisionCameraView extends RelativeLayout
             array.recycle();
         }
 
+        /* initialize the state of each view beyond its attributes in xml */
+        initViewsState();
         Log.i(TAG, "initAttributes: ");
+    }
+
+    private void initViewsState() {
+        if (!isScanQR) {
+            B.btnScanQR.setEnabled(false);
+
+            if (!isScanText) {
+                B.btnScanText.setEnabled(false);
+            }
+
+            if (!isScanFace) {
+                B.btnScanFace.setEnabled(false);
+            }
+        }
+        else {
+            isScanFace = false;
+            isScanText = false;
+            B.btnScanText.setEnabled(false);
+            B.btnScanFace.setEnabled(false);
+        }
     }
 
     private void assignEvents() {
@@ -209,6 +235,47 @@ public class VisionCameraView extends RelativeLayout
                 camera.setParameters(params);
             }
         });*/
+
+        B.btnScanQR.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                isScanQR = !isScanQR;
+                B.btnScanQR.setEnabled(isScanQR);
+
+                if (isScanQR) {
+                    isScanFace = false;
+                    isScanText = false;
+                    B.btnScanFace.setEnabled(false);
+                    B.btnScanText.setEnabled(false);
+                }
+            }
+        });
+
+        B.btnScanFace.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                isScanFace = !isScanFace;
+                B.btnScanFace.setEnabled(isScanFace);
+
+                if (isScanQR) {
+                    isScanQR = false;
+                    B.btnScanQR.setEnabled(false);
+                }
+            }
+        });
+
+        B.btnScanText.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                isScanText = !isScanText;
+                B.btnScanText.setEnabled(isScanText);
+
+                if (isScanQR) {
+                    isScanQR = false;
+                    B.btnScanQR.setEnabled(false);
+                }
+            }
+        });
 
 
         B.btnTakePicture.setOnClickListener(new OnClickListener() {
@@ -272,8 +339,6 @@ public class VisionCameraView extends RelativeLayout
 
                 Camera.Parameters param;
                 param = camera.getParameters();
-                if (isLightTurnedOn)
-                    param.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
 
                 List<Camera.Size> previewSizes = param.getSupportedPreviewSizes();
                 param.setPreviewSize(previewSizes.get(0).width, previewSizes.get(0).height);
@@ -347,6 +412,9 @@ public class VisionCameraView extends RelativeLayout
 
     }
 
+
+
+    /* image data processing */
     private byte[] getPortraitByteArray(byte[] data) {
         Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length);
         if (bmp == null) return null;

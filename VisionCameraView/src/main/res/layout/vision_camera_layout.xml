@@ -11,13 +11,13 @@
             android:id="@+id/surfaceView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
-
         <com.icestorm.android.mlkit.GraphicOverlay
             android:id="@+id/graphicOverlay"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
 
-        <ImageButton
+
+        <com.icestorm.android.CameraImageButton
             android:id="@+id/btnToggleLight"
             android:src="@drawable/ic_turn_off"
             android:background="@drawable/take_picture_background"
@@ -26,7 +26,7 @@
             android:layout_marginStart="15dp"
             android:layout_width="@dimen/TakePictureButtonSize"
             android:layout_height="@dimen/TakePictureButtonSize"/>
-        <ImageButton
+        <com.icestorm.android.CameraImageButton
             android:id="@+id/btnSwitchCamera"
             android:src="@drawable/ic_toggle"
             android:background="@drawable/take_picture_background"
@@ -36,7 +36,7 @@
             android:layout_width="@dimen/TakePictureButtonSize"
             android:layout_height="@dimen/TakePictureButtonSize"/>
 
-        <ImageButton
+        <com.icestorm.android.CameraImageButton
             android:id="@+id/btnTakePicture"
             android:src="@drawable/ic_camera_lens"
             android:background="@drawable/take_picture_background"
@@ -46,7 +46,7 @@
             android:layout_width="@dimen/TakePictureButtonSize"
             android:layout_height="@dimen/TakePictureButtonSize"/>
 
-        <ImageButton
+        <com.icestorm.android.CameraImageButton
             android:id="@+id/btnScanFace"
             android:src="@drawable/ic_face_recognition"
             android:background="@drawable/take_picture_background"
@@ -56,7 +56,7 @@
             android:layout_marginEnd="15dp"
             android:layout_width="@dimen/TakePictureButtonSize"
             android:layout_height="@dimen/TakePictureButtonSize"/>
-        <ImageButton
+        <com.icestorm.android.CameraImageButton
             android:id="@+id/btnScanText"
             android:src="@drawable/ic_find_text"
             android:background="@drawable/take_picture_background"
@@ -66,7 +66,7 @@
             android:layout_marginEnd="15dp"
             android:layout_width="@dimen/TakePictureButtonSize"
             android:layout_height="@dimen/TakePictureButtonSize"/>
-        <ImageButton
+        <com.icestorm.android.CameraImageButton
             android:id="@+id/btnScanQR"
             android:src="@drawable/ic_qr_code"
             android:background="@drawable/take_picture_background"

@@ -4,6 +4,9 @@
     <declare-styleable name="VisionCameraView">
         <attr name="vc_isFrontCamera" format="boolean"/>
         <attr name="vc_isLightTurnedOn" format="boolean"/>
+        <attr name="vc_isScanFace" format="boolean"/>
+        <attr name="vc_isScanText" format="boolean"/>
+        <attr name="vc_isScanQR" format="boolean"/>
 
         <attr name="vc_textColor" format="color"/>
         <attr name="vc_showTextBorder" format="boolean"/>
