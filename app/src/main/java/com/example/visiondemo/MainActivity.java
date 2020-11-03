@@ -9,8 +9,14 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.mlkit.vision.barcode.Barcode;
+import com.google.mlkit.vision.face.Face;
+import com.google.mlkit.vision.text.Text;
 import com.icestorm.android.VisionCameraEventsListener;
 import com.icestorm.android.VisionCameraView;
+import com.icestorm.android.processor.MlkitResultListener;
+
+import java.util.List;
 
 
 public class MainActivity extends AppCompatActivity implements VisionCameraEventsListener {
@@ -57,6 +63,5 @@ public class MainActivity extends AppCompatActivity implements VisionCameraEvent
     public void onCameraUpdated(Bitmap bmp) {
         /*MlkitScanner.scanText(bmp, this);*/
     }
-
 
 }

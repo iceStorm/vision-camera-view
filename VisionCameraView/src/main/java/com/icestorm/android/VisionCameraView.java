@@ -57,9 +57,9 @@ public class VisionCameraView extends RelativeLayout
 
     /* constants */
     private static final float DEFAULT_FACE_CONTOUR_RADIUS = 5f;
-    private static final int DEFAULT_FACE_COLOR = Color.parseColor("#4AF44336");
+    private static final int DEFAULT_FACE_COLOR = Color.parseColor("#007BFF");
 
-    private static final int DEFAULT_QR_BACKGROUND_COLOR = Color.parseColor("#007BFF");
+    private static final int DEFAULT_QR_BACKGROUND_COLOR = Color.parseColor("#4AF44336");
     private static final int DEFAULT_QR_LINE_COLOR = Color.parseColor("#F44336");
     private static final float DEFAULT_QR_LINE_HEIGHT = 2f;
     private static final float DEFAULT_QR_SIZE = 200f;
@@ -207,6 +207,7 @@ public class VisionCameraView extends RelativeLayout
     private void initViewsState() {
         if (!isScanQR) {
             btnScanQR.setEnabled(false);
+            scannerOverlay.setVisibility(GONE);
 
             if (!isScanText) {
                 btnScanText.setEnabled(false);

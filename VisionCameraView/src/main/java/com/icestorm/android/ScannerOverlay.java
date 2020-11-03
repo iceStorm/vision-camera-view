@@ -1,21 +1,14 @@
 package com.icestorm.android;
 
 import android.content.Context;
-import android.graphics.Canvas;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.view.animation.Animation;
-import android.view.animation.BounceInterpolator;
-import android.view.animation.DecelerateInterpolator;
+import android.view.animation.AnimationUtils;
 import android.widget.RelativeLayout;
 
 import androidx.annotation.Nullable;
-import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
-
-import at.wirecube.additiveanimations.additive_animator.AdditiveAnimator;
 
 
 
@@ -53,19 +46,8 @@ public class ScannerOverlay extends RelativeLayout {
         background = screen.findViewById(R.id.boxBackground);
 
 
-        box.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-                AdditiveAnimator
-                    .animate(line, 5000)
-                    .setInterpolator(new DecelerateInterpolator())
-                    .x(0)
-                    .y(box.getHeight())
-                    .setRepeatCount(Animation.INFINITE)
-                    .setRepeatMode(Animation.REVERSE)
-                    .start();
-            }
-        });
+        Animation anim = AnimationUtils.loadAnimation(getContext(), R.anim.scanner_overlay_line_anim);
+        line.startAnimation(anim);
     }
 
 

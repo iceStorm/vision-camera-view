@@ -29,7 +29,6 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
-    implementation 'at.wirecube:additive_animations:1.8.0'
     implementation 'com.google.mlkit:face-detection:16.0.2'
     implementation 'com.google.mlkit:barcode-scanning:16.0.3'
     implementation 'com.google.android.gms:play-services-mlkit-text-recognition:16.1.1'
