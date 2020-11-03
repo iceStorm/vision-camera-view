@@ -1,6 +1,7 @@
 package com.icestorm.android;
 
 import android.content.Context;
+import android.os.Handler;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,7 +10,6 @@ import android.view.animation.AnimationUtils;
 import android.widget.RelativeLayout;
 
 import androidx.annotation.Nullable;
-
 
 
 public class ScannerOverlay extends RelativeLayout {
@@ -44,7 +44,6 @@ public class ScannerOverlay extends RelativeLayout {
         line = screen.findViewById(R.id.scanningLine);
         box = screen.findViewById(R.id.targetingBox);
         background = screen.findViewById(R.id.boxBackground);
-
 
         Animation anim = AnimationUtils.loadAnimation(getContext(), R.anim.scanner_overlay_line_anim);
         line.startAnimation(anim);

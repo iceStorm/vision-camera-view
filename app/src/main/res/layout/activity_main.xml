@@ -12,17 +12,8 @@
         android:id="@+id/cameraView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:vc_autoScan="true"
-        app:vc_isScanQR="false"
-        app:vc_qrSize="250dp"
-        app:vc_qrBackgroundColor="#529C27B0"
-        app:vc_qrLineColor="#FFEB3B"
-        app:vc_qrLineHeight="2dp"
-        app:vc_isFrontCamera="true"
-        app:vc_isScanFace="true"
-        app:vc_isScanText="false"
-        app:vc_textColor="@color/DEFAULT_TEXT_COLOR"
-        app:vc_faceColor="@color/DEFAULT_FACE_COLOR"/>
+
+        app:vc_qrSize="200dp"/>
 
 </RelativeLayout>
 

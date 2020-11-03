@@ -95,6 +95,7 @@ public class VisionCameraView extends RelativeLayout
     private CameraImageButton btnScanQR;
     private CameraImageButton btnSwitchCamera;
     private CameraImageButton btnTakePicture;
+    private CameraImageButton btnClear;
     private ScannerOverlay scannerOverlay;
     private Camera camera;
     private Context context;
@@ -147,6 +148,7 @@ public class VisionCameraView extends RelativeLayout
         btnScanQR = screen.findViewById(R.id.btnScanQR);
         btnSwitchCamera = screen.findViewById(R.id.btnSwitchCamera);
         btnTakePicture = screen.findViewById(R.id.btnTakePicture);
+        btnClear = screen.findViewById(R.id.btnClear);
 
         
         this.context = context;
@@ -249,6 +251,12 @@ public class VisionCameraView extends RelativeLayout
     }
 
     private void assignEvents() {
+        btnClear.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                graphicOverlay.clear();
+            }
+        });
 
         btnSwitchCamera.setOnClickListener(new OnClickListener() {
             @Override
