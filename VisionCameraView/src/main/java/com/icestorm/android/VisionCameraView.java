@@ -59,6 +59,7 @@ public class VisionCameraView extends RelativeLayout
     public static final int CAMERA_PERMISSION_REQUEST_CODE = 0;
 
     /* constants */
+    private static final boolean DEFAULT_OPTIMAL_SIZE = false;
     private static final float DEFAULT_FACE_CONTOUR_RADIUS = 5f;
     private static final int DEFAULT_FACE_COLOR = Color.parseColor("#007BFF");
 
@@ -88,6 +89,7 @@ public class VisionCameraView extends RelativeLayout
     private boolean isScanText;
     private boolean isScanQR;
     private boolean isAutoScan;
+    private boolean isOptimalSize;
     public GraphicOverlay graphicOverlay;
 
     /* fields */
@@ -185,6 +187,7 @@ public class VisionCameraView extends RelativeLayout
         if (attrs != null) {
             TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.VisionCameraView);
 
+            this.isOptimalSize = array.getBoolean(R.styleable.VisionCameraView_vc_isOptimalSize, DEFAULT_OPTIMAL_SIZE);
             this.isAutoScan = array.getBoolean(R.styleable.VisionCameraView_vc_autoScan, true);
             this.isFrontCamera = array.getBoolean(R.styleable.VisionCameraView_vc_isFrontCamera, false);
             this.isScanFace = array.getBoolean(R.styleable.VisionCameraView_vc_isScanFace, false);
@@ -373,20 +376,21 @@ public class VisionCameraView extends RelativeLayout
         try {
             graphicOverlay.clear();
             camera.setDisplayOrientation(90);
-
-            final Camera.Parameters param;
-            param = camera.getParameters();
-
-            List<Camera.Size> mSupportedPreviewSizes = param.getSupportedPreviewSizes();
-            Camera.Size mPreviewSize = getOptimalPreviewSize(mSupportedPreviewSizes, getWidth(), getHeight());
-            param.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
-
-            camera.setParameters(param);
             camera.setPreviewDisplay(surfaceHolder);
-            camera.startPreview();
-
-            /* set the callback to listen whenever content in camera is changed */
             camera.setPreviewCallback(VisionCameraView.this);
+
+            /* set the optimal size */
+            if (this.isOptimalSize) {
+                final Camera.Parameters param;
+                param = camera.getParameters();
+
+                List<Camera.Size> mSupportedPreviewSizes = param.getSupportedPreviewSizes();
+                Camera.Size mPreviewSize = getOptimalPreviewSize(mSupportedPreviewSizes, getWidth(), getHeight());
+                param.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
+                camera.setParameters(param);
+            }
+
+            camera.startPreview();
         }
         catch (Exception e) {
             Toast.makeText(context, "Failed to init the camera", Toast.LENGTH_SHORT).show();
@@ -452,7 +456,6 @@ public class VisionCameraView extends RelativeLayout
         try {
             byte[] yuvBytes = getYuvBytesArray(data, camera);
             byte[] portraitBytes = getPortraitBytesArray(yuvBytes);
-            camera.addCallbackBuffer(portraitBytes);
 
             Bitmap actualBitmap = BitmapFactory.decodeByteArray(portraitBytes, 0, portraitBytes.length);
             Bitmap resizedBitmap = new CameraImageResizer(actualBitmap, rootView).getResizedImage();

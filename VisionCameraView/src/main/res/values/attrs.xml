@@ -3,6 +3,7 @@
 <resources>
     <declare-styleable name="VisionCameraView">
         <attr name="vc_autoScan" format="boolean"/>
+        <attr name="vc_isOptimalSize" format="boolean"/>
 
         <attr name="vc_isFrontCamera" format="boolean"/>
         <attr name="vc_isScanFace" format="boolean"/>
