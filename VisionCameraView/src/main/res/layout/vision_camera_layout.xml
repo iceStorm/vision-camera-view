@@ -42,7 +42,7 @@
 
     <com.icestorm.android.CameraImageButton
         android:id="@+id/btnTakePicture"
-        android:src="@drawable/ic_camera_lens"
+        android:src="@drawable/ic_focus"
         android:background="?android:attr/actionBarItemBackground"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
