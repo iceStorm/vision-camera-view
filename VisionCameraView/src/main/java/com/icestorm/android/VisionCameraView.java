@@ -20,16 +20,19 @@ import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.PermissionChecker;
 
+import com.google.mlkit.vision.barcode.Barcode;
 import com.google.mlkit.vision.face.Face;
 import com.google.mlkit.vision.text.Text;
 import com.icestorm.android.mlkit.GraphicOverlay;
 import com.icestorm.android.processor.MlkitDrawer;
+import com.icestorm.android.processor.MlkitResultListener;
 import com.icestorm.android.processor.MlkitScanner;
 import com.icestorm.android.utils.CameraImageResizer;
 
@@ -37,8 +40,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.List;
-
-import info.androidhive.barcode.ScannerOverlay;
 
 
 @SuppressWarnings("deprecation")
@@ -56,15 +57,26 @@ public class VisionCameraView extends RelativeLayout
 
     /* constants */
     private static final float DEFAULT_FACE_CONTOUR_RADIUS = 5f;
-    private static final int DEFAULT_TEXT_COLOR = Color.parseColor("#F44336");
-    private static final int DEFAULT_FACE_COLOR = Color.parseColor("#007BFF");
+    private static final int DEFAULT_FACE_COLOR = Color.parseColor("#4AF44336");
+
+    private static final int DEFAULT_QR_BACKGROUND_COLOR = Color.parseColor("#007BFF");
+    private static final int DEFAULT_QR_LINE_COLOR = Color.parseColor("#F44336");
+    private static final float DEFAULT_QR_LINE_HEIGHT = 2f;
+    private static final float DEFAULT_QR_SIZE = 200f;
+
     private static final float DEFAULT_TEXT_SIZE = 30f;
+    private static final int DEFAULT_TEXT_COLOR = Color.parseColor("#F44336");
     private static final boolean IS_SHOW_TEXT_BORDER = false;
+
 
     /* properties */
     private AlertDialog alertDialog;
     private boolean isFrontCamera;
     public float faceContourPointRadius;
+    public int qrLineColor;
+    public float qrLineHeight;
+    public int qrBackgroundColor;
+    public float qrSize;
     public int faceColor;
     public int textColor;
     public float textSize;
@@ -172,9 +184,15 @@ public class VisionCameraView extends RelativeLayout
             this.isScanText = array.getBoolean(R.styleable.VisionCameraView_vc_isScanText, true);
             this.isScanQR = array.getBoolean(R.styleable.VisionCameraView_vc_isScanQR, false);
 
-            this.faceContourPointRadius = array.getDimension(R.styleable.VisionCameraView_vc_faceContourPointRadius, DEFAULT_FACE_CONTOUR_RADIUS);
-            this.textColor = array.getColor(R.styleable.VisionCameraView_vc_textColor, DEFAULT_TEXT_COLOR);
+            this.qrBackgroundColor = array.getColor(R.styleable.VisionCameraView_vc_qrBackgroundColor, DEFAULT_QR_BACKGROUND_COLOR);
+            this.qrSize = array.getDimension(R.styleable.VisionCameraView_vc_qrSize, DEFAULT_QR_SIZE);
+            this.qrLineColor = array.getColor(R.styleable.VisionCameraView_vc_qrLineColor, DEFAULT_QR_LINE_COLOR);
+            this.qrLineHeight = array.getDimension(R.styleable.VisionCameraView_vc_qrLineHeight, DEFAULT_QR_LINE_HEIGHT);
+
             this.faceColor = array.getColor(R.styleable.VisionCameraView_vc_faceColor, DEFAULT_FACE_COLOR);
+            this.faceContourPointRadius = array.getDimension(R.styleable.VisionCameraView_vc_faceContourPointRadius, DEFAULT_FACE_CONTOUR_RADIUS);
+
+            this.textColor = array.getColor(R.styleable.VisionCameraView_vc_textColor, DEFAULT_TEXT_COLOR);
             this.textSize = array.getDimension(R.styleable.VisionCameraView_vc_textSize, DEFAULT_TEXT_SIZE);
             this.isShowTextBorder = array.getBoolean(R.styleable.VisionCameraView_vc_showTextBorder, IS_SHOW_TEXT_BORDER);
 
@@ -209,9 +227,23 @@ public class VisionCameraView extends RelativeLayout
 
 
         if (!isAutoScan) {
+            scannerOverlay.setVisibility(GONE);
             btnScanFace.setVisibility(GONE);
             btnScanText.setVisibility(GONE);
             btnScanQR.setVisibility(GONE);
+        }
+        else {
+            scannerOverlay.line.setBackgroundColor(qrLineColor);
+            scannerOverlay.background.setBackgroundColor(qrBackgroundColor);
+
+            ViewGroup.LayoutParams lineParams = scannerOverlay.line.getLayoutParams();
+            lineParams.height = (int)qrLineHeight;
+            scannerOverlay.line.setLayoutParams(lineParams);
+
+            ViewGroup.LayoutParams boxParams = scannerOverlay.box.getLayoutParams();
+            boxParams.width = (int)qrSize;
+            boxParams.height = (int)qrSize;
+            scannerOverlay.box.setLayoutParams(boxParams);
         }
     }
 
@@ -555,7 +587,8 @@ public class VisionCameraView extends RelativeLayout
 
     /* overriding results from MlkitScanner --> send to activity */
     @Override
-    public void onBarcodeDetected(String value) {
+    public void onBarcodeDetected(List<Barcode> barCodes) {
+        MlkitDrawer.drawBarCodes(true, barCodes, graphicOverlay, textColor, textSize, isShowTextBorder);
     }
 
     @Override

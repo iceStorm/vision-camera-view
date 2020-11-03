@@ -59,26 +59,4 @@ public class MainActivity extends AppCompatActivity implements VisionCameraEvent
     }
 
 
-
-    /*@Override
-    public void onBarcodeDetected(String value) {
-        Toast.makeText(this, value, Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onTextDetected(Text textBlocks) {
-        MlkitDrawer.drawTexts(true,
-            textBlocks,
-            B.cameraView.graphicOverlay,
-            B.cameraView.textColor,
-            B.cameraView.textSize,
-            B.cameraView.isShowTextBorder);
-    }
-
-    @Override
-    public void onFaceDetected(List<Face> faces) {
-
-    }*/
-
-
 }

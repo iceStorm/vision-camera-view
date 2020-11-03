@@ -14,15 +14,11 @@
         android:id="@+id/graphicOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
-    <info.androidhive.barcode.ScannerOverlay
+    <com.icestorm.android.ScannerOverlay
         android:id="@+id/scannerOverlay"
-        android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#45000000"
-        app:line_width="5"
-        app:line_speed="50"
-        />
+        android:gravity="center"/>
 
 
     <com.icestorm.android.CameraImageButton

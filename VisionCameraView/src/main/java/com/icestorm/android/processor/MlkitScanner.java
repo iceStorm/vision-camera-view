@@ -19,7 +19,6 @@ import com.google.mlkit.vision.face.FaceDetectorOptions;
 import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
-import com.icestorm.android.MlkitResultListener;
 
 import java.util.List;
 
@@ -100,9 +99,7 @@ public class MlkitScanner {
                         return;
                     }
 
-                    for (Barcode b : barcodes) {
-                        listener.onBarcodeDetected(b.getRawValue());
-                    }
+                    listener.onBarcodeDetected(barcodes);
                 }
             })
             .addOnFailureListener(new OnFailureListener() {

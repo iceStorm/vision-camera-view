@@ -1,7 +1,9 @@
 package com.icestorm.android.processor;
 
+import com.google.mlkit.vision.barcode.Barcode;
 import com.google.mlkit.vision.face.Face;
 import com.google.mlkit.vision.text.Text;
+import com.icestorm.android.mlkit.BarcodeGraphic;
 import com.icestorm.android.mlkit.FaceContourGraphic;
 import com.icestorm.android.mlkit.GraphicOverlay;
 import com.icestorm.android.mlkit.TextGraphic;
@@ -37,5 +39,15 @@ public class MlkitDrawer {
         }
     }
 
+    public static void drawBarCodes(boolean clearBefore, List<Barcode> barCodes, GraphicOverlay overlay, int textColor, float textSize, boolean drawTextBounder) {
+        if (clearBefore)
+            overlay.clear();
+
+        for (Barcode b : barCodes) {
+            BarcodeGraphic graphic = new BarcodeGraphic(overlay, textColor, textSize, drawTextBounder);
+            overlay.add(graphic);
+            graphic.updateItem(b);
+        }
+    }
 
 }
