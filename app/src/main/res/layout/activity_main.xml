@@ -12,8 +12,10 @@
         android:id="@+id/cameraView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-
-        app:vc_qrSize="200dp"/>
+        app:vc_isFrontCamera="true"
+        app:vc_isScanQR="false"
+        app:vc_qrLineColor="#ff0"
+        app:vc_qrSize="200dp" />
 
 </RelativeLayout>
 

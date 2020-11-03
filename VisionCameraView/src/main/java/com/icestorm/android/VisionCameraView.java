@@ -14,6 +14,8 @@ import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.os.Build;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -47,6 +49,7 @@ public class VisionCameraView extends RelativeLayout
         implements SurfaceHolder.Callback,
             Camera.PictureCallback,
             Camera.ShutterCallback,
+            Camera.PreviewCallback,
             MlkitResultListener {
 
 
@@ -101,6 +104,7 @@ public class VisionCameraView extends RelativeLayout
     private Context context;
     private AttributeSet attrs;
     private SurfaceHolder surfaceHolder;
+    private CameraHandlerThread cameraHandlerThread;
 
 
 
@@ -161,6 +165,7 @@ public class VisionCameraView extends RelativeLayout
 
             this.surfaceHolder = surfaceView.getHolder();
             this.surfaceHolder.addCallback(this);
+            this.setFocusable(true);
             this.graphicOverlay = screen.findViewById(R.id.graphicOverlay);
         }
 
@@ -257,7 +262,6 @@ public class VisionCameraView extends RelativeLayout
                 graphicOverlay.clear();
             }
         });
-
         btnSwitchCamera.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -339,81 +343,68 @@ public class VisionCameraView extends RelativeLayout
 
 
 
-    /* public utility functions */
-    private void openCamera(int cameraId) {
+    /* initializing camera */
+    private void oldOpenCamera(final int cameraId) {
         try {
-            if (isCameraPermissionGranted()) {
-                graphicOverlay.clear();
-                camera = Camera.open(cameraId);
-                camera.setDisplayOrientation(90);
-
-                final Camera.Parameters param;
-                param = camera.getParameters();
-
-                List<Camera.Size> mSupportedPreviewSizes = param.getSupportedPreviewSizes();
-                for(Camera.Size str: mSupportedPreviewSizes)
-                    Log.e(TAG, str.width + "/" + str.height);
-
-                Camera.Size mPreviewSize = getOptimalPreviewSize(mSupportedPreviewSizes, getWidth(), getHeight());
-                param.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
-                camera.setParameters(param);
-                camera.setPreviewDisplay(surfaceHolder);
-                camera.startPreview();
-
-
-                /* set the callback whenever content in camera is changed */
-                camera.setPreviewCallback(new Camera.PreviewCallback() {
-                    @Override
-                    public void onPreviewFrame(byte[] data, Camera camera) {
-                        try {
-                            byte[] yuvBytes = getYuvBytesArray(data, camera);
-                            byte[] portraitBytes = getPortraitBytesArray(yuvBytes);
-
-
-                            Bitmap actualBitmap = BitmapFactory.decodeByteArray(portraitBytes, 0, portraitBytes.length);
-                            Bitmap resizedBitmap = new CameraImageResizer(actualBitmap, rootView).getResizedImage();
-
-
-                            if (context instanceof VisionCameraEventsListener)
-                                ((VisionCameraEventsListener) context).onCameraUpdated(resizedBitmap);
-
-
-                            if (isAutoScan)
-                                if (isScanFace)
-                                    MlkitScanner.scanFace(resizedBitmap, VisionCameraView.this);
-                                else
-                                    if (isScanText)
-                                        MlkitScanner.scanText(resizedBitmap, VisionCameraView.this);
-                                    else
-                                        if (isScanQR)
-                                            MlkitScanner.scanBarCode(resizedBitmap, VisionCameraView.this);
-
-                        }
-                        catch (Exception e) {
-                            Toast toast = Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT);
-                            toast.show();
-                        }
-                    }
-                });
-            }
-            else {
-                askCameraPermission();
-            }
+            camera = Camera.open(cameraId);
+            initCamera();
         }
-        catch (Exception e) {
-            Toast.makeText(context, "Error on surfaceCreated", Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "surfaceCreated: ", e);
+        catch (RuntimeException e) {
+            Log.e(TAG, "failed to open front camera");
         }
     }
 
+    private void newOpenCamera(final int cameraId) {
+        if (isCameraPermissionGranted()) {
+            if (cameraHandlerThread == null) {
+                cameraHandlerThread = new CameraHandlerThread();
+            }
+
+            synchronized (cameraHandlerThread) {
+                cameraHandlerThread.openCamera(cameraId);
+            }
+        }
+        else {
+            askCameraPermission();
+        }
+    }
+
+    private void initCamera() {
+        try {
+            graphicOverlay.clear();
+            camera.setDisplayOrientation(90);
+
+            final Camera.Parameters param;
+            param = camera.getParameters();
+
+            List<Camera.Size> mSupportedPreviewSizes = param.getSupportedPreviewSizes();
+            Camera.Size mPreviewSize = getOptimalPreviewSize(mSupportedPreviewSizes, getWidth(), getHeight());
+            param.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
+
+            camera.setParameters(param);
+            camera.setPreviewDisplay(surfaceHolder);
+            camera.startPreview();
+
+            /* set the callback to listen whenever content in camera is changed */
+            camera.setPreviewCallback(VisionCameraView.this);
+        }
+        catch (Exception e) {
+            Toast.makeText(context, "Failed to init the camera", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "initCamera: ", e);
+        }
+    }
+
+
+
+    /* public util functions */
     public void switchCamera() {
         if (this.isFrontCamera) {
             this.isFrontCamera = false;
-            openCamera(0);
+            newOpenCamera(0);
         }
         else {
             this.isFrontCamera = true;
-            openCamera(1);
+            newOpenCamera(1);
         }
     }
 
@@ -422,6 +413,9 @@ public class VisionCameraView extends RelativeLayout
         camera.takePicture(null, null, VisionCameraView.this);
     }
 
+
+
+    /* camera callbacks */
     @Override
     public void onPictureTaken(byte[] data, Camera camera) {
         Log.i(TAG, "onPictureTaken: " + data.length);
@@ -451,6 +445,38 @@ public class VisionCameraView extends RelativeLayout
     @Override
     public void onShutter() {
 
+    }
+
+    @Override
+    public void onPreviewFrame(byte[] data, Camera camera) {
+        try {
+            byte[] yuvBytes = getYuvBytesArray(data, camera);
+            byte[] portraitBytes = getPortraitBytesArray(yuvBytes);
+            camera.addCallbackBuffer(portraitBytes);
+
+            Bitmap actualBitmap = BitmapFactory.decodeByteArray(portraitBytes, 0, portraitBytes.length);
+            Bitmap resizedBitmap = new CameraImageResizer(actualBitmap, rootView).getResizedImage();
+
+
+            if (context instanceof VisionCameraEventsListener)
+                ((VisionCameraEventsListener) context).onCameraUpdated(resizedBitmap);
+
+
+            if (isAutoScan)
+                if (isScanFace)
+                    MlkitScanner.scanFace(resizedBitmap, VisionCameraView.this);
+                else
+                if (isScanText)
+                    MlkitScanner.scanText(resizedBitmap, VisionCameraView.this);
+                else
+                if (isScanQR)
+                    MlkitScanner.scanBarCode(resizedBitmap, VisionCameraView.this);
+
+        }
+        catch (Exception e) {
+            Toast toast = Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT);
+            toast.show();
+        }
     }
 
 
@@ -521,25 +547,23 @@ public class VisionCameraView extends RelativeLayout
         Camera.Size optimalSize = null;
         double minDiff = Double.MAX_VALUE;
 
-        int targetHeight = h;
-
         for (Camera.Size size : sizes) {
             double ratio = (double) size.height / size.width;
             if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE)
                 continue;
 
-            if (Math.abs(size.height - targetHeight) < minDiff) {
+            if (Math.abs(size.height - h) < minDiff) {
                 optimalSize = size;
-                minDiff = Math.abs(size.height - targetHeight);
+                minDiff = Math.abs(size.height - h);
             }
         }
 
         if (optimalSize == null) {
             minDiff = Double.MAX_VALUE;
             for (Camera.Size size : sizes) {
-                if (Math.abs(size.height - targetHeight) < minDiff) {
+                if (Math.abs(size.height - h) < minDiff) {
                     optimalSize = size;
-                    minDiff = Math.abs(size.height - targetHeight);
+                    minDiff = Math.abs(size.height - h);
                 }
             }
         }
@@ -552,17 +576,18 @@ public class VisionCameraView extends RelativeLayout
     /* SurfaceHolder Callbacks */
     @Override
     public void surfaceCreated(@NonNull SurfaceHolder holder) {
-        openCamera(isFrontCamera? 1: 0);
+        newOpenCamera(isFrontCamera? 1: 0);
     }
 
     @Override
     public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {
-
+        /*Toast.makeText(context, "surfaceChanged", Toast.LENGTH_SHORT).show();*/
     }
 
     @Override
     public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
-
+        camera.stopPreview();
+        /*camera.release();*/
     }
 
 
@@ -589,7 +614,7 @@ public class VisionCameraView extends RelativeLayout
     }
 
     public void onCameraPermissionGranted() {
-        openCamera(isFrontCamera? 1: 0);
+        newOpenCamera(isFrontCamera? 1: 0);
     }
 
 
@@ -608,6 +633,41 @@ public class VisionCameraView extends RelativeLayout
     @Override
     public void onTextDetected(Text textBlocks) {
         MlkitDrawer.drawTexts(true, textBlocks, graphicOverlay, textColor, textSize, isShowTextBorder);
+    }
+
+
+
+    /* Handling the camera in other thread */
+    public class CameraHandlerThread extends HandlerThread {
+        Handler mHandler = null;
+
+
+        public CameraHandlerThread() {
+            super("CameraHandlerThread");
+            start();
+            mHandler = new Handler(getLooper());
+        }
+
+        synchronized void notifyCameraOpened() {
+            notify();
+        }
+
+        void openCamera(final int cameraId) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    oldOpenCamera(cameraId);
+                    notifyCameraOpened();
+                }
+            });
+
+            try {
+                wait();
+            }
+            catch (InterruptedException e) {
+                Log.w(TAG, "wait was interrupted");
+            }
+        }
     }
 
 }
