@@ -14,16 +14,11 @@ import java.util.List;
 /** Graphic instance for rendering face contours graphic overlay view. */
 public class FaceContourGraphic extends GraphicOverlay.Graphic {
 
-  private static final float FACE_POSITION_RADIUS = 5.0f;
+  private float FACE_POSITION_RADIUS = 5.0f;
   private static final float ID_TEXT_SIZE = 30.0f;
   private static final float ID_Y_OFFSET = 80.0f;
   private static final float ID_X_OFFSET = -70.0f;
   private static final float BOX_STROKE_WIDTH = 5.0f;
-
-  private static final int[] COLOR_CHOICES = {
-    Color.BLUE, Color.CYAN, Color.GREEN, Color.MAGENTA, Color.RED, Color.WHITE, Color.YELLOW
-  };
-  private static int currentColorIndex = 0;
 
   private final Paint facePositionPaint;
   private final Paint idPaint;
@@ -31,21 +26,20 @@ public class FaceContourGraphic extends GraphicOverlay.Graphic {
 
   private volatile Face face;
 
-  public FaceContourGraphic(GraphicOverlay overlay) {
+  public FaceContourGraphic(GraphicOverlay overlay, int pointColor, float faceContourPointRadius) {
     super(overlay);
+    FACE_POSITION_RADIUS = faceContourPointRadius;
 
-    currentColorIndex = (currentColorIndex + 1) % COLOR_CHOICES.length;
-    final int selectedColor = COLOR_CHOICES[currentColorIndex];
 
     facePositionPaint = new Paint();
-    facePositionPaint.setColor(selectedColor);
+    facePositionPaint.setColor(pointColor);
 
     idPaint = new Paint();
-    idPaint.setColor(selectedColor);
+    idPaint.setColor(pointColor);
     idPaint.setTextSize(ID_TEXT_SIZE);
 
     boxPaint = new Paint();
-    boxPaint.setColor(selectedColor);
+    boxPaint.setColor(pointColor);
     boxPaint.setStyle(Paint.Style.STROKE);
     boxPaint.setStrokeWidth(BOX_STROKE_WIDTH);
   }

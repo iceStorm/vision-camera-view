@@ -2,11 +2,14 @@
 
 <resources>
     <declare-styleable name="VisionCameraView">
+        <attr name="vc_autoScan" format="boolean"/>
+
         <attr name="vc_isFrontCamera" format="boolean"/>
         <attr name="vc_isScanFace" format="boolean"/>
         <attr name="vc_isScanText" format="boolean"/>
         <attr name="vc_isScanQR" format="boolean"/>
 
+        <attr name="vc_faceContourPointRadius" format="dimension"/>
         <attr name="vc_faceColor" format="color"/>
         <attr name="vc_textColor" format="color"/>
 

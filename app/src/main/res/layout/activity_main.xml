@@ -1,23 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<layout xmlns:android="http://schemas.android.com/apk/res/android"
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    tools:context=".MainActivity">
+    tools:context=".MainActivity"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
-    <RelativeLayout
+    <com.icestorm.android.VisionCameraView
+        android:id="@+id/cameraView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        app:vc_autoScan="false"
+        app:vc_isFrontCamera="false"
+        app:vc_textColor="@color/DEFAULT_TEXT_COLOR"
+        app:vc_faceColor="@color/DEFAULT_FACE_COLOR"/>
 
-        <com.icestorm.android.VisionCameraView
-            android:id="@+id/cameraView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:vc_isFrontCamera="false"
-            app:vc_isScanQR="true"
-            app:vc_textColor="@color/DEFAULT_TEXT_COLOR"
-            app:vc_faceColor="@color/DEFAULT_FACE_COLOR"/>
+</RelativeLayout>
 
-    </RelativeLayout>
-
-</layout>

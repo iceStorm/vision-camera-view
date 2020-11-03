@@ -2,29 +2,29 @@ package com.example.visiondemo;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.databinding.DataBindingUtil;
 
-import com.example.visiondemo.databinding.ActivityMainBinding;
-import com.google.mlkit.vision.text.Text;
 import com.icestorm.android.VisionCameraEventsListener;
+import com.icestorm.android.VisionCameraView;
 
 
 public class MainActivity extends AppCompatActivity implements VisionCameraEventsListener {
     private static final String TAG = "MainActivity";
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 0;
-    private ActivityMainBinding B;
+    private VisionCameraView cameraView;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        B = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        setContentView( R.layout.activity_main);
+
+        cameraView = findViewById(R.id.cameraView);
     }
 
 
@@ -33,9 +33,9 @@ public class MainActivity extends AppCompatActivity implements VisionCameraEvent
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         switch (requestCode) {
-            case CAMERA_PERMISSION_REQUEST_CODE: {
+            case VisionCameraView.CAMERA_PERMISSION_REQUEST_CODE: {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                    B.cameraView.onCameraPermissionGranted();
+                    cameraView.onCameraPermissionGranted();
                 else {
                     Toast.makeText(this, "Bạn chưa cấp quyền Camera", Toast.LENGTH_SHORT).show();
                 }
@@ -43,6 +43,7 @@ public class MainActivity extends AppCompatActivity implements VisionCameraEvent
             }
         }
     }
+
 
 
     @Override
@@ -53,13 +54,31 @@ public class MainActivity extends AppCompatActivity implements VisionCameraEvent
     }
 
     @Override
+    public void onCameraUpdated(Bitmap bmp) {
+        /*MlkitScanner.scanText(bmp, this);*/
+    }
+
+
+
+    /*@Override
     public void onBarcodeDetected(String value) {
         Toast.makeText(this, value, Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void onTextDetected(Text textBlocks) {
-        Log.i(TAG, "onTextDetected: " + textBlocks.getText());
+        MlkitDrawer.drawTexts(true,
+            textBlocks,
+            B.cameraView.graphicOverlay,
+            B.cameraView.textColor,
+            B.cameraView.textSize,
+            B.cameraView.isShowTextBorder);
     }
+
+    @Override
+    public void onFaceDetected(List<Face> faces) {
+
+    }*/
+
 
 }

@@ -18,19 +18,19 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.PermissionChecker;
-import androidx.databinding.DataBindingUtil;
 
+import com.google.mlkit.vision.face.Face;
 import com.google.mlkit.vision.text.Text;
-import com.icestorm.android.databinding.VisionCameraLayoutBinding;
-import com.icestorm.android.processor.MlkitProcessor;
+import com.icestorm.android.mlkit.GraphicOverlay;
+import com.icestorm.android.processor.MlkitDrawer;
+import com.icestorm.android.processor.MlkitScanner;
 import com.icestorm.android.utils.CameraImageResizer;
 
 import java.io.ByteArrayOutputStream;
@@ -38,16 +38,15 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.util.List;
 
+import info.androidhive.barcode.ScannerOverlay;
 
 
 @SuppressWarnings("deprecation")
 public class VisionCameraView extends RelativeLayout
         implements SurfaceHolder.Callback,
-            VisionCameraPermissionResult,
             Camera.PictureCallback,
             Camera.ShutterCallback,
-            BarcodeListener,
-            TextListener {
+            MlkitResultListener {
 
 
     private static final String TAG = "VisionCameraView";
@@ -56,6 +55,7 @@ public class VisionCameraView extends RelativeLayout
     public static final int CAMERA_PERMISSION_REQUEST_CODE = 0;
 
     /* constants */
+    private static final float DEFAULT_FACE_CONTOUR_RADIUS = 5f;
     private static final int DEFAULT_TEXT_COLOR = Color.parseColor("#F44336");
     private static final int DEFAULT_FACE_COLOR = Color.parseColor("#007BFF");
     private static final float DEFAULT_TEXT_SIZE = 30f;
@@ -64,18 +64,26 @@ public class VisionCameraView extends RelativeLayout
     /* properties */
     private AlertDialog alertDialog;
     private boolean isFrontCamera;
-    private int faceColor;
-    private int textColor;
-    private float textSize;
-    private boolean isShowTextBorder;
+    public float faceContourPointRadius;
+    public int faceColor;
+    public int textColor;
+    public float textSize;
+    public boolean isShowTextBorder;
     private boolean isScanFace;
     private boolean isScanText;
     private boolean isScanQR;
+    private boolean isAutoScan;
+    public GraphicOverlay graphicOverlay;
 
     /* fields */
-    private VisionCameraLayoutBinding B;
-    private List<Camera.Size> mSupportedPreviewSizes;
-    private Camera.Size mPreviewSize;
+    private RelativeLayout rootView;
+    private SurfaceView surfaceView;
+    private CameraImageButton btnScanText;
+    private CameraImageButton btnScanFace;
+    private CameraImageButton btnScanQR;
+    private CameraImageButton btnSwitchCamera;
+    private CameraImageButton btnTakePicture;
+    private ScannerOverlay scannerOverlay;
     private Camera camera;
     private Context context;
     private AttributeSet attrs;
@@ -117,16 +125,29 @@ public class VisionCameraView extends RelativeLayout
     /* initializing */
     private void init(Context context, AttributeSet attrs) {
         LayoutInflater inflater = LayoutInflater.from(context);
-        B = DataBindingUtil.inflate(inflater, R.layout.vision_camera_layout, this, true);
+        View screen = inflater.inflate(R.layout.vision_camera_layout, this, true);
 
+        rootView = (RelativeLayout) screen;
+        scannerOverlay = screen.findViewById(R.id.scannerOverlay);
+        surfaceView = screen.findViewById(R.id.surfaceView);
+        btnScanFace = screen.findViewById(R.id.btnScanFace);
+        btnScanText = screen.findViewById(R.id.btnScanText);
+        btnScanQR = screen.findViewById(R.id.btnScanQR);
+        btnSwitchCamera = screen.findViewById(R.id.btnSwitchCamera);
+        btnTakePicture = screen.findViewById(R.id.btnTakePicture);
+
+        
         this.context = context;
         this.attrs = attrs;
 
 
         if (!isInEditMode()) {
-            initCamera();
             assignEvents();
             initAlertDialog(inflater);
+
+            this.surfaceHolder = surfaceView.getHolder();
+            this.surfaceHolder.addCallback(this);
+            this.graphicOverlay = screen.findViewById(R.id.graphicOverlay);
         }
 
 
@@ -141,20 +162,17 @@ public class VisionCameraView extends RelativeLayout
         alertDialog.setCancelable(false);
     }
 
-    private void initCamera() {
-        this.surfaceHolder = B.surfaceView.getHolder();
-        this.surfaceHolder.addCallback(this);
-    }
-
     private void initAttributes() {
         if (attrs != null) {
             TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.VisionCameraView);
 
+            this.isAutoScan = array.getBoolean(R.styleable.VisionCameraView_vc_autoScan, true);
             this.isFrontCamera = array.getBoolean(R.styleable.VisionCameraView_vc_isFrontCamera, false);
             this.isScanFace = array.getBoolean(R.styleable.VisionCameraView_vc_isScanFace, false);
             this.isScanText = array.getBoolean(R.styleable.VisionCameraView_vc_isScanText, true);
             this.isScanQR = array.getBoolean(R.styleable.VisionCameraView_vc_isScanQR, false);
 
+            this.faceContourPointRadius = array.getDimension(R.styleable.VisionCameraView_vc_faceContourPointRadius, DEFAULT_FACE_CONTOUR_RADIUS);
             this.textColor = array.getColor(R.styleable.VisionCameraView_vc_textColor, DEFAULT_TEXT_COLOR);
             this.faceColor = array.getColor(R.styleable.VisionCameraView_vc_faceColor, DEFAULT_FACE_COLOR);
             this.textSize = array.getDimension(R.styleable.VisionCameraView_vc_textSize, DEFAULT_TEXT_SIZE);
@@ -170,101 +188,107 @@ public class VisionCameraView extends RelativeLayout
 
     private void initViewsState() {
         if (!isScanQR) {
-            B.btnScanQR.setEnabled(false);
+            btnScanQR.setEnabled(false);
 
             if (!isScanText) {
-                B.btnScanText.setEnabled(false);
+                btnScanText.setEnabled(false);
             }
 
             if (!isScanFace) {
-                B.btnScanFace.setEnabled(false);
+                btnScanFace.setEnabled(false);
             }
         }
         else {
             isScanFace = false;
             isScanText = false;
-            B.btnScanText.setEnabled(false);
-            B.btnScanFace.setEnabled(false);
+            btnScanText.setEnabled(false);
+            btnScanFace.setEnabled(false);
 
-            B.scannerOverlay.setVisibility(VISIBLE);
+            scannerOverlay.setVisibility(VISIBLE);
         }
 
+
+        if (!isAutoScan) {
+            btnScanFace.setVisibility(GONE);
+            btnScanText.setVisibility(GONE);
+            btnScanQR.setVisibility(GONE);
+        }
     }
 
     private void assignEvents() {
 
-        B.btnSwitchCamera.setOnClickListener(new OnClickListener() {
+        btnSwitchCamera.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 switchCamera();
             }
         });
 
-        B.btnScanQR.setOnClickListener(new OnClickListener() {
+        btnScanQR.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                B.graphicOverlay.clear();
+                graphicOverlay.clear();
                 isScanQR = !isScanQR;
-                B.btnScanQR.setEnabled(isScanQR);
+                btnScanQR.setEnabled(isScanQR);
 
                 if (isScanQR) {
                     isScanFace = false;
                     isScanText = false;
-                    B.btnScanFace.setEnabled(false);
-                    B.btnScanText.setEnabled(false);
+                    btnScanFace.setEnabled(false);
+                    btnScanText.setEnabled(false);
                 }
 
 
-                B.scannerOverlay.setVisibility(isScanQR ? VISIBLE: GONE);
+                scannerOverlay.setVisibility(isScanQR ? VISIBLE: GONE);
             }
         });
 
-        B.btnScanFace.setOnClickListener(new OnClickListener() {
+        btnScanFace.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                B.graphicOverlay.clear();
+                graphicOverlay.clear();
                 isScanFace = !isScanFace;
-                B.btnScanFace.setEnabled(isScanFace);
+                btnScanFace.setEnabled(isScanFace);
 
                 if (isScanQR) {
                     isScanQR = false;
-                    B.btnScanQR.setEnabled(false);
+                    btnScanQR.setEnabled(false);
                 }
 
                 if (isScanText) {
                     isScanText = false;
-                    B.btnScanText.setEnabled(false);
+                    btnScanText.setEnabled(false);
                 }
 
 
-                B.scannerOverlay.setVisibility(isScanQR ? VISIBLE: GONE);
+                scannerOverlay.setVisibility(isScanQR ? VISIBLE: GONE);
             }
         });
 
-        B.btnScanText.setOnClickListener(new OnClickListener() {
+        btnScanText.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                B.graphicOverlay.clear();
+                graphicOverlay.clear();
                 isScanText = !isScanText;
-                B.btnScanText.setEnabled(isScanText);
+                btnScanText.setEnabled(isScanText);
 
                 if (isScanQR) {
                     isScanQR = false;
-                    B.btnScanQR.setEnabled(false);
-                    B.graphicOverlay.clear();
+                    btnScanQR.setEnabled(false);
+                    graphicOverlay.clear();
                 }
 
                 if (isScanFace) {
                     isScanFace = false;
-                    B.btnScanFace.setEnabled(false);
+                    btnScanFace.setEnabled(false);
                 }
 
-                B.scannerOverlay.setVisibility(isScanQR ? VISIBLE: GONE);
+                scannerOverlay.setVisibility(isScanQR ? VISIBLE: GONE);
             }
         });
 
 
-        B.btnTakePicture.setOnClickListener(new OnClickListener() {
+        btnTakePicture.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 beginCaptureImage();
@@ -278,18 +302,18 @@ public class VisionCameraView extends RelativeLayout
     private void openCamera(int cameraId) {
         try {
             if (isCameraPermissionGranted()) {
-                B.graphicOverlay.clear();
+                graphicOverlay.clear();
                 camera = Camera.open(cameraId);
                 camera.setDisplayOrientation(90);
 
                 final Camera.Parameters param;
                 param = camera.getParameters();
 
-                mSupportedPreviewSizes = param.getSupportedPreviewSizes();
+                List<Camera.Size> mSupportedPreviewSizes = param.getSupportedPreviewSizes();
                 for(Camera.Size str: mSupportedPreviewSizes)
                     Log.e(TAG, str.width + "/" + str.height);
 
-                mPreviewSize = getOptimalPreviewSize(mSupportedPreviewSizes, getWidth(), getHeight());
+                Camera.Size mPreviewSize = getOptimalPreviewSize(mSupportedPreviewSizes, getWidth(), getHeight());
                 param.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
                 camera.setParameters(param);
                 camera.setPreviewDisplay(surfaceHolder);
@@ -306,17 +330,23 @@ public class VisionCameraView extends RelativeLayout
 
 
                             Bitmap actualBitmap = BitmapFactory.decodeByteArray(portraitBytes, 0, portraitBytes.length);
-                            Bitmap resizedBitmap = new CameraImageResizer(actualBitmap, B.getRoot()).getResizedImage();
+                            Bitmap resizedBitmap = new CameraImageResizer(actualBitmap, rootView).getResizedImage();
 
 
-                            if (isScanFace)
-                                MlkitProcessor.processFace(resizedBitmap, B.graphicOverlay);
-                            else
-                                if (isScanText)
-                                    MlkitProcessor.processText(resizedBitmap, B.graphicOverlay, isShowTextBorder, textColor, textSize, VisionCameraView.this);
+                            if (context instanceof VisionCameraEventsListener)
+                                ((VisionCameraEventsListener) context).onCameraUpdated(resizedBitmap);
+
+
+                            if (isAutoScan)
+                                if (isScanFace)
+                                    MlkitScanner.scanFace(resizedBitmap, VisionCameraView.this);
                                 else
-                                    if (isScanQR)
-                                        MlkitProcessor.scanBarCode(resizedBitmap, VisionCameraView.this);
+                                    if (isScanText)
+                                        MlkitScanner.scanText(resizedBitmap, VisionCameraView.this);
+                                    else
+                                        if (isScanQR)
+                                            MlkitScanner.scanBarCode(resizedBitmap, VisionCameraView.this);
+
                         }
                         catch (Exception e) {
                             Toast toast = Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT);
@@ -517,21 +547,25 @@ public class VisionCameraView extends RelativeLayout
         Toast.makeText(context, "Bạn chưa cấp quyền Camera", Toast.LENGTH_SHORT).show();
     }
 
-    @Override
     public void onCameraPermissionGranted() {
         openCamera(isFrontCamera? 1: 0);
     }
 
+
+
+    /* overriding results from MlkitScanner --> send to activity */
     @Override
     public void onBarcodeDetected(String value) {
-        if (context instanceof VisionCameraEventsListener)
-            ((VisionCameraEventsListener) context).onBarcodeDetected(value);
+    }
+
+    @Override
+    public void onFaceDetected(List<Face> faces) {
+        MlkitDrawer.drawFaces(true, faces, graphicOverlay, faceColor, faceContourPointRadius);
     }
 
     @Override
     public void onTextDetected(Text textBlocks) {
-        if (context instanceof VisionCameraEventsListener)
-            ((VisionCameraEventsListener) context).onTextDetected(textBlocks);
+        MlkitDrawer.drawTexts(true, textBlocks, graphicOverlay, textColor, textSize, isShowTextBorder);
     }
 
 }
